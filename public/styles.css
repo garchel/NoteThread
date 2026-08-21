@@ -604,6 +604,37 @@ body {
 /* ---- Modal: nova conversa (grade de emojis) ---- */
 .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
 @media (max-width: 760px) { .emoji-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* ---- Emoji Picker categorizado (threads/pastas) ---- */
+.ep { display: flex; flex-direction: column; gap: 8px; }
+.ep-search {
+  width: 100%; background: var(--bg); border: 1.5px solid var(--border); color: var(--text);
+  border-radius: 10px; padding: 9px 12px; font-size: 13.5px; outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.ep-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ep-cats {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+}
+.ep-chip {
+  flex-shrink: 0; background: var(--bg); border: 1.5px solid var(--border); color: var(--text-dim);
+  font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  transition: all .12s;
+}
+.ep-chip:hover { border-color: var(--accent); color: var(--accent); }
+.ep-scroll {
+  max-height: 210px; overflow-y: auto; border: 1px solid var(--border);
+  border-radius: 12px; padding: 8px; background: color-mix(in srgb, var(--bg) 55%, transparent);
+  scrollbar-width: thin; overscroll-behavior: contain;
+}
+.ep-section { margin-bottom: 4px; }
+.ep-head {
+  position: sticky; top: -8px; z-index: 1;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .6px; font-weight: 800;
+  color: var(--text-dim); background: var(--bg-elev);
+  margin: 0 -8px 4px; padding: 5px 14px 4px;
+  border-bottom: 1px solid var(--border);
+}
 .emoji-opt {
   font-size: 20px; padding: 8px 0; background: var(--bg); border: 1.5px solid var(--border);
   border-radius: 12px; cursor: pointer; transition: all .12s; display: grid; place-items: center;

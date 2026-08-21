@@ -78,6 +78,25 @@
   };
   const wrapSvg = (svg, size) => `<span class="svg-ic" style="width:${size || 16}px;height:${size || 16}px;display:inline-block">${svg}</span>`;
 
+  // ===================================================================
+  // CATÁLOGO DE EMOJIS por categoria (threads/pastas)
+  // ===================================================================
+  const EMOJI_CATS = [
+    { id: 'pop', label: 'Populares', emojis: ['💬','💡','📝','📌','⭐','🔥','🎯','✅','🗒️','📔','🧠','❤️','🎨','🌱','⚡','🔔'] },
+    { id: 'saude', label: 'Saúde', emojis: ['💊','🩺','🏥','🚑','💉','🩹','🦷','👁️','🫀','🦴','🧬','👩‍⚕️','👨‍⚕️','🧘','🏋️','🥗','🚭','⚕️'] },
+    { id: 'trab', label: 'Trabalho', emojis: ['💼','🖥️','📊','📈','📉','🧾','📎','🗂️','📄','🖊️','💵','💰','💳','🤝','📧','⏰','📁','📂'] },
+    { id: 'escola', label: 'Escola & Estudos', emojis: ['🎓','🏫','📚','📖','✏️','📐','🔬','🔭','🧮','🔢','🌍','🚌','🧪','📝','🎒','🏅'] },
+    { id: 'fam', label: 'Casa & Família', emojis: ['🏡','🔑','🛏️','🛁','🍳','🧹','🧺','🪴','🔧','🛠️','👶','🧒','🐶','🐱','👨‍👩‍👧‍👦','💝','🎂','🎁'] },
+    { id: 'viagem', label: 'Viagens & Lazer', emojis: ['✈️','🚗','🚆','🛳️','🧳','🗺️','🏖️','🏔️','🏕️','🌴','🎡','🎟️','📸','🚲','🗽','🧭'] },
+    { id: 'ent', label: 'Séries, Filmes & Jogos', emojis: ['🎬','📺','🍿','🎮','🕹️','🎵','🎧','🎤','🎸','🎭','🎪','🃏','🎲','🎰','📚','🎤'] },
+    { id: 'anime', label: 'Animes & HQs', emojis: ['🍥','⚔️','🐉','🥷','👻','🦸','🦹','🧙','🧝','🚀','👾','💥','🌀','🎴','📕','✨'] },
+    { id: 'comida', label: 'Comida & Bebidas', emojis: ['🍕','🍔','🌮','🍣','🍜','🍎','🥑','🍰','🍞','☕','🍺','🍷','🧁','🍫','🥤','🛒'] },
+    { id: 'esporte', label: 'Esportes', emojis: ['⚽','🏀','🎾','🏐','🏈','🏓','⛳','🚴','🏊','🥋','🤸','🏆','🥇','🎽','⛸️','🎿'] },
+    { id: 'financas', label: 'Finanças', emojis: ['💰','💸','💳','🏦','📈','📉','🧾','🪙','💎','🤑','📋','🗓️'] },
+    { id: 'natureza', label: 'Natureza & Clima', emojis: ['🌻','🌳','🌸','🌊','☀️','🌙','⛅','🌈','🐢','🦋','🐝','🌵','🍀','🐾','🍄','❄️'] },
+    { id: 'simbolos', label: 'Símbolos & Objetos', emojis: ['🔒','⚙️','♻️','🆘','📅','📦','🏷️','🧩','🔍','🗑️','📱','💻','🌐','🔗','🚨','♾️'] },
+  ];
+
   // Renderiza markdown básico e SEGURO (escapa HTML primeiro, depois aplica).
   // Suporta: **negrito**, *itálico*, `código`, #tags (mantidas como chip),
   // listas (- ou * por linha), e quebras de linha. Não faz HTML cru passar.
@@ -1128,15 +1147,59 @@
       $('#btn-back').addEventListener('click', () => $('#app').classList.remove('show-chat'));
     },
 
+    // ---------- Seletor de emojis (componente compartilhado) ----------
+    _pickerHTML(prefix, defEmoji) {
+      const cats = EMOJI_CATS.map((c) => `
+        <div class="ep-section" data-cat="${c.id}">
+          <div class="ep-head">${c.label}</div>
+          <div class="emoji-grid">${c.emojis.map((e) => `<button type="button" class="emoji-opt${e === defEmoji ? ' sel' : ''}" data-emoji="${e}">${e}</button>`).join('')}</div>
+        </div>`).join('');
+      const chips = EMOJI_CATS.map((c) => `<button type="button" class="ep-chip" data-goto="${c.id}">${c.label}</button>`).join('');
+      return `
+        <input id="${prefix}-search" class="ep-search" type="text" placeholder="Filtrar categorias… (ex: saúde, viagem)" autocomplete="off" />
+        <div class="ep-cats">${chips}</div>
+        <div id="${prefix}-scroll" class="ep-scroll">${cats}</div>`;
+    },
+    _bindPicker(prefix, getDefaultSel, onPick) {
+      const scroll = $(`#${prefix}-scroll`);
+      const search = $(`#${prefix}-search`);
+      const select = (btn) => {
+        scroll.querySelectorAll('.emoji-opt.sel').forEach((x) => x.classList.remove('sel'));
+        btn.classList.add('sel');
+        onPick(btn.dataset.emoji);
+      };
+      // seleção inicial (fallback: mantém default se nada marcado)
+      let initial = scroll.querySelector('.emoji-opt.sel');
+      if (!initial) onPick(getDefaultSel);
+      scroll.querySelectorAll('.emoji-opt').forEach((b) => b.addEventListener('click', () => select(b)));
+      // chips → rola até a categoria
+      document.querySelectorAll(`#${prefix}-scroll`).forEach(() => {});
+      const pickerRoot = scroll.closest('.ep');
+      if (pickerRoot) pickerRoot.querySelectorAll('.ep-chip').forEach((ch) => ch.addEventListener('click', () => {
+        search.value = '';
+        scroll.querySelectorAll('.ep-section').forEach((s) => s.classList.remove('hidden'));
+        const sec = scroll.querySelector(`.ep-section[data-cat="${ch.dataset.goto}"]`);
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      // busca filtra seções
+      if (search) search.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        scroll.querySelectorAll('.ep-section').forEach((s) => {
+          const cat = EMOJI_CATS.find((c) => c.id === s.dataset.cat);
+          s.classList.toggle('hidden', !!(q && cat && !cat.label.toLowerCase().includes(q)));
+        });
+        const first = Array.from(scroll.querySelectorAll('.ep-section')).find((s) => !s.classList.contains('hidden'));
+        if (first && q) first.scrollIntoView({ block: 'start' });
+      });
+    },
+
     createThread() {
-      const EMOJIS = ['💬', '💡', '📝', '📚', '🎯', '🔥', '🌱', '⭐', '🧠', '💼', '🏡', '🎨'];
-      const opts = EMOJIS.map((e) => `<button type="button" class="emoji-opt" data-emoji="${e}">${e}</button>`).join('');
+      let chosen = '💬';
       const body = `
         <label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Nome da conversa</label>
         <input id="nt-name" type="text" placeholder="ex: Ideias de Projetos, Tarefas Diárias…" autofocus />
         <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Ícone</label>
-        <div id="nt-emojis" class="emoji-grid">${opts}</div>`;
-      let chosen = '💬';
+        <div class="ep">${this._pickerHTML('nt', chosen)}</div>`;
       this.showModal('Nova conversa', body, () => {
         const v = ($('#nt-name').value || '').trim();
         if (!v) { $('#nt-name').focus(); return; }
@@ -1148,25 +1211,17 @@
         Sound.play('create'); haptic('success');
         this.openThread(t.id);
       });
-      // seleção de emoji
-      const grid = $('#nt-emojis');
-      grid.querySelectorAll('.emoji-opt').forEach((b) => b.addEventListener('click', () => {
-        grid.querySelectorAll('.emoji-opt').forEach((x) => x.classList.remove('sel'));
-        b.classList.add('sel'); chosen = b.dataset.emoji;
-      }));
-      grid.querySelector('.emoji-opt').classList.add('sel');
+      this._bindPicker('nt', '💬', (e) => { chosen = e; });
       setTimeout(() => $('#nt-name') && $('#nt-name').focus(), 50);
     },
 
     createFolder() {
-      const ICONS = ['📁', '📂', '📚', '🗂️', '🗃️', '📦', '🎯', '💡', '🔒', '🌟', '🏷️', '🧩'];
-      const opts = ICONS.map((e) => `<button type="button" class="emoji-opt" data-emoji="${e}">${e}</button>`).join('');
+      let chosen = '📁';
       const body = `
         <label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Nome da pasta</label>
         <input id="nf-name" type="text" placeholder="ex: Trabalho, Pessoal, Estudos…" autofocus />
         <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Ícone</label>
-        <div id="nf-emojis" class="emoji-grid">${opts}</div>`;
-      let chosen = '📁';
+        <div class="ep">${this._pickerHTML('nf', chosen)}</div>`;
       this.showModal('Nova pasta', body, () => {
         const v = ($('#nf-name').value || '').trim();
         if (!v) { $('#nf-name').focus(); return; }
@@ -1178,12 +1233,7 @@
         Sound.play('create'); haptic('success');
         this.renderTree();
       });
-      const grid = $('#nf-emojis');
-      grid.querySelectorAll('.emoji-opt').forEach((b) => b.addEventListener('click', () => {
-        grid.querySelectorAll('.emoji-opt').forEach((x) => x.classList.remove('sel'));
-        b.classList.add('sel'); chosen = b.dataset.emoji;
-      }));
-      grid.querySelector('.emoji-opt').classList.add('sel');
+      this._bindPicker('nf', '📁', (e) => { chosen = e; });
       setTimeout(() => $('#nf-name') && $('#nf-name').focus(), 50);
     },
 

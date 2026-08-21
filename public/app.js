@@ -154,6 +154,9 @@
     // 4) itálico *...* e _..._
     s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
     s = s.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+    // 4.5) menções @[Nome](t:id) → chip clicável que abre a thread
+    s = s.replace(/@\[([^\]]+)\]\(t:([a-z0-9]+)\)/gi,
+      (_, name, tid) => `<button type="button" class="mention" data-tid="${tid}">@${name}</button>`);
     // 5) #tags NÃO são convertidas aqui — são renderizadas em bloco separado (.bubble-tags) no bubbleEl
     // 6) listas: linhas começando com - ou *
     // 7) checklist: linhas começando com [ ] ou [x]
@@ -506,7 +509,7 @@
       const payload = {
         threads: Object.fromEntries((th.data || []).map(t => [t.id, { id: t.id, name: t.name, emoji: t.emoji, folderId: t.folder_id, favorite: t.favorite, pinnedId: t.pinned_id, createdAt: new Date(t.created_at).getTime(), updatedAt: new Date(t.updated_at).getTime(), lastPreview: t.last_preview }])),
         folders: Object.fromEntries((fo.data || []).map(f => [f.id, { id: f.id, name: f.name, emoji: f.emoji, parentId: f.parent_id, createdAt: new Date(f.created_at).getTime() }])),
-        notes: (() => { const m = {}; (no.data || []).forEach(n => { (m[n.thread_id] = m[n.thread_id] || []).push({ clientId: n.client_id, threadId: n.thread_id, text: n.text, images: n.images || [], tags: n.tags || [], ts: Number(n.ts), sortOrder: n.sort_order, edited: n.edited, editedAt: n.edited_at, rev: n.rev, userId: Store.user ? Store.user.mail : 'anon' }); }); return m; })()
+        notes: (() => { const m = {}; (no.data || []).forEach(n => { (m[n.thread_id] = m[n.thread_id] || []).push({ clientId: n.client_id, threadId: n.thread_id, text: n.text, images: n.images || [], tags: n.tags || [], ts: Number(n.ts), sortOrder: n.sort_order, edited: n.edited, editedAt: n.edited_at, rev: n.rev, remindAt: n.remind_at ? Number(n.remind_at) : null, remindFired: !!n.remind_fired, userId: Store.user ? Store.user.mail : 'anon' }); }); return m; })()
       };
       this.emit('snapshot', payload);
     },
@@ -575,7 +578,9 @@
     async _doSend(type, payload) {
       const uid = await this._uid(); if (!uid) throw new Error('sem sessão');
       if (type === 'note:upsert') {
-        const n = payload; await this.supa.from('notes').upsert({ client_id: n.clientId, thread_id: n.threadId, text: n.text, images: n.images || [], tags: n.tags || [], ts: n.ts, sort_order: n.sortOrder || 0, edited: !!n.edited, edited_at: n.editedAt || null, rev: n.rev || 0, user_id: uid }, { onConflict: 'client_id' });
+        const n = payload; await this.supa.from('notes').upsert({ client_id: n.clientId, thread_id: n.threadId, text: n.text, images: n.images || [], tags: n.tags || [], ts: n.ts, sort_order: n.sortOrder || 0, edited: !!n.edited, edited_at: n.editedAt || null, rev: n.rev || 0, remind_at: n.remindAt || null, remind_fired: !!n.remindFired, user_id: uid }, { onConflict: 'client_id' });
+      } else if (type === 'note:remind') {
+        await this.supa.from('notes').update({ remind_at: payload.remindAt || null, remind_fired: !!payload.remindFired }).eq('client_id', payload.clientId);
       } else if (type === 'thread:upsert') {
         const t = payload; await this.supa.from('threads').upsert({ id: t.id, name: t.name, emoji: t.emoji, folder_id: t.folderId || null, favorite: !!t.favorite, pinned_id: t.pinnedId || null, updated_at: new Date().toISOString(), last_preview: t.lastPreview || '', user_id: uid }, { onConflict: 'id' });
       } else if (type === 'thread:delete') {
@@ -643,6 +648,7 @@
       this.bindSearch();
       this.bindShortcuts();
       this.bindSwipe();
+      this.initReminders();
       // persistência de login: restaura sessão Supabase antes do primeiro render
       if (USE_SUPABASE) {
         try {
@@ -1471,9 +1477,13 @@
       else ic = wrapSvg(ICON.bubble, 15);
       const noteCount = Store.notesFor(t.id).length;
       const countEl = noteCount ? `<span class="note-count" title="${noteCount} nota${noteCount !== 1 ? 's' : ''}">${noteCount}</span>` : '';
+      // badge ⏰ se a thread tem lembrete pendente
+      const hasRemind = Store.notesFor(t.id).some((x) => x.remindAt && !x.remindFired);
+      const remindEl = hasRemind ? '<span class="remind-badge" title="Lembrete pendente">⏰</span>' : '';
       el.innerHTML = `<span class="twist" style="visibility:hidden">${wrapSvg(ICON.chevron, 10)}</span>
                       <span class="ico">${ic}</span>
                       <span class="label">${esc(t.name)}</span>
+                      ${remindEl}
                       ${countEl}
                       <span class="star" title="Favoritar">${wrapSvg(ICON.star, 13)}</span>`;
       el.addEventListener('click', () => this.openThread(t.id));
@@ -1769,6 +1779,10 @@
           catch (err) { console.error('[checklist] falha ao alternar:', err); }
         });
       });
+      // Menções @: clicar abre a thread referenciada
+      div.querySelectorAll('.mention').forEach((m) => {
+        m.addEventListener('click', (e) => { e.stopPropagation(); const tid = m.dataset.tid; if (Store.getThread(tid)) this.openThread(tid); });
+      });
 
       return div;
     },
@@ -1894,6 +1908,8 @@
         else if (act === 'pin' || act === 'unpin') this.togglePin(cid);
         else if (act === 'tags') this.editTags(cid);
         else if (act === 'copy') this.copyNote(cid);
+        else if (act === 'remind') this.showReminderModal(cid);
+        else if (act === 'cancel-remind') this.cancelReminder(cid);
       });
     },
     openMsgPopover(bubbleEl, note) {
@@ -1901,8 +1917,10 @@
       this.popoverClientId = note.clientId;
       const thread = Store.getThread(this.activeThread);
       const isPinned = thread && thread.pinnedId === note.clientId;
+      const hasRemind = !!(note.remindAt && !note.remindFired);
       p.querySelector('[data-msg="pin"]').classList.toggle('hidden', isPinned);
       p.querySelector('[data-msg="unpin"]').classList.toggle('hidden', !isPinned);
+      p.querySelector('[data-msg="cancel-remind"]').classList.toggle('hidden', !hasRemind);
       p.classList.remove('hidden');
       // posicionar perto do bubble, ancorado à seta ▾
       const r = bubbleEl.getBoundingClientRect();
@@ -2153,6 +2171,138 @@
       });
     },
 
+    // ---------- Menções @ (autocomplete + inserção) ----------
+    _mentionToken(ta) {
+      // retorna {start, query} se o caret está logo após "@texto"
+      const pos = ta.selectionStart;
+      const before = ta.value.slice(0, pos);
+      const m = before.match(/(?:^|\s)@([^\s@]{0,30})$/);
+      return m ? { start: pos - m[1].length - 1, query: m[1] } : null;
+    },
+    _initMentions(ta) {
+      let dd = document.getElementById('mention-dd');
+      if (!dd) {
+        dd = document.createElement('div');
+        dd.id = 'mention-dd';
+        dd.className = 'mention-dd hidden';
+        document.body.appendChild(dd);
+      }
+      const close = () => dd.classList.add('hidden');
+      this._mentionClose = close;
+
+      const render = (token) => {
+        const q = token.query.toLowerCase();
+        const list = Store.threadList()
+          .filter((t) => !q || (t.name || '').toLowerCase().includes(q))
+          .slice(0, 6);
+        if (!list.length) { close(); return; }
+        dd.innerHTML = list.map((t, i) =>
+          `<button type="button" class="mention-opt${i === 0 ? ' sel' : ''}" data-tid="${t.id}" data-name="${esc(t.name)}">${esc(t.emoji || '💬')} ${esc(t.name)}</button>`
+        ).join('');
+        dd.classList.remove('hidden');
+        const r = ta.getBoundingClientRect();
+        dd.style.left = Math.max(8, r.left) + 'px';
+        dd.style.bottom = (window.innerHeight - r.top + 6) + 'px';
+        dd.style.top = 'auto';
+        dd.querySelectorAll('.mention-opt').forEach((b) => b.addEventListener('mousedown', (e) => {
+          e.preventDefault(); // evita blur do textarea
+          this._insertMention(ta, token.start, b.dataset.tid, b.dataset.name); close();
+        }));
+      };
+
+      ta.addEventListener('input', () => {
+        const token = this._mentionToken(ta);
+        token ? render(token) : close();
+      });
+      ta.addEventListener('keydown', (e) => {
+        if (dd.classList.contains('hidden')) return;
+        const opts = Array.from(dd.querySelectorAll('.mention-opt'));
+        let cur = opts.findIndex((o) => o.classList.contains('sel'));
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault(); e.stopImmediatePropagation();
+          cur = (cur + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+          opts.forEach((o) => o.classList.remove('sel'));
+          opts[cur].classList.add('sel');
+        } else if (e.key === 'Enter') {
+          e.preventDefault(); e.stopImmediatePropagation(); // não envia a nota
+          const b = opts[Math.max(0, cur)];
+          this._insertMention(ta, this._mentionToken(ta).start, b.dataset.tid, b.dataset.name);
+          close();
+        } else if (e.key === 'Escape') { e.stopImmediatePropagation(); close(); }
+      }, true); // capture: roda antes do handler de envio
+      ta.addEventListener('blur', () => setTimeout(close, 120));
+    },
+    _insertMention(ta, start, tid, name) {
+      const token = `@[${name}](t:${tid}) `;
+      const pos = ta.selectionStart;
+      ta.value = ta.value.slice(0, start) + token + ta.value.slice(pos);
+      ta.selectionStart = ta.selectionEnd = start + token.length;
+      ta.focus();
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+
+    // ---------- Lembretes (Notification API) ----------
+    async _ensureNotifPermission() {
+      if (!('Notification' in window)) return false;
+      if (Notification.permission === 'granted') return true;
+      if (Notification.permission === 'denied') return false;
+      const p = await Notification.requestPermission();
+      return p === 'granted';
+    },
+    showReminderModal(clientId) {
+      const arr = Store.notesFor(this.activeThread); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
+      const def = new Date(Date.now() + 60 * 60 * 1000);
+      const toLocal = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      const has = n.remindAt && !n.remindFired;
+      const body = `
+        <label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Lembrar-me em</label>
+        <input id="remind-at" type="datetime-local" value="${toLocal(def)}" style="width:100%" />
+        ${has ? `<p style="font-size:12.5px;color:var(--text-dim);margin-top:8px">Lembrete ativo para ${new Date(n.remindAt).toLocaleString('pt-BR')}</p>` : ''}
+        <p style="font-size:12.5px;color:var(--text-dim);margin-top:8px">A notificação aparece com o app aberto. Permissão do navegador será solicitada.</p>`;
+      this.showModal('Lembrete', body, () => {
+        const v = $('#remind-at').value;
+        if (!v) return;
+        n.remindAt = new Date(v).getTime();
+        n.remindFired = false;
+        Store.save();
+        Sync.send('note:remind', { clientId, remindAt: n.remindAt, remindFired: false });
+        this._ensureNotifPermission();
+        this.queueRenderTree();
+        this.closeModal();
+        this.toast(`Lembrete: ${new Date(n.remindAt).toLocaleString('pt-BR')}`, { kind: 'success' });
+      });
+    },
+    cancelReminder(clientId) {
+      const arr = Store.notesFor(this.activeThread); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
+      n.remindAt = null; n.remindFired = false; Store.save();
+      Sync.send('note:remind', { clientId, remindAt: null, remindFired: false });
+      this.queueRenderTree();
+      this.toast('Lembrete cancelado', { kind: 'info' });
+    },
+    initReminders() {
+      if (this._remindTimer) return;
+      this._remindTimer = setInterval(() => this._checkReminders(), 20000);
+      this._checkReminders();
+    },
+    _checkReminders() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const nowTs = Date.now();
+      Object.entries(Store.data.notes).forEach(([tid, arr]) => {
+        arr.forEach((n) => {
+          if (!n.remindAt || n.remindFired || n.remindAt > nowTs) return;
+          n.remindFired = true; Store.save();
+          Sync.send('note:remind', { clientId: n.clientId, remindAt: n.remindAt, remindFired: true });
+          const th = Store.getThread(tid);
+          const title = `⏰ ${th ? th.name : 'NoteThread'}`;
+          const body = (n.text || '').slice(0, 120) || 'Lembrete';
+          try { new Notification(title, { body, tag: n.clientId }); } catch {}
+          this.toast(`⏰ ${th ? th.name : ''}: ${body}`, { kind: 'pin', duration: 6000 });
+          haptic('medium');
+          this.queueRenderTree();
+        });
+      });
+    },
+
     // ---------- Composer ----------
     bindComposer() {
       const ta = $('#composer-input'), send = $('#btn-send');
@@ -2171,6 +2321,8 @@
         ta.style.overflowY = ta.scrollHeight > maxH ? 'auto' : 'hidden';
       };
       ta.addEventListener('input', () => { resize(); send.disabled = ta.value.trim() === '' && !this.pendingImages.length; });
+      // autocomplete de menções @ (registrado ANTES do keydown de envio p/ interceptar Enter)
+      this._initMentions(ta);
       // também recalcula no resize da janela (limite 60vh muda)
       window.addEventListener('resize', resize);
       // inicializa com estado correto (evita scrollbar fantasma no carregamento)

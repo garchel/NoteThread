@@ -44,8 +44,14 @@ create table if not exists notes (
   edited boolean default false,
   edited_at bigint,
   rev integer default 0,
+  remind_at bigint,
+  remind_fired boolean default false,
   created_at timestamptz default now()
 );
+
+-- migração para bancos já criados antes de remind_at
+alter table notes add column if not exists remind_at bigint;
+alter table notes add column if not exists remind_fired boolean default false;
 
 -- 2. RLS
 alter table profiles enable row level security;

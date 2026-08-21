@@ -1653,6 +1653,27 @@
       div.dataset.clientId = n.clientId;
       div.dataset.day = new Date(n.ts).toDateString();
       div.setAttribute('draggable', 'true');
+      // seleção de texto: arrastar o mouse DESLIGA o drag nativo (que rouba a seleção)
+      div.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        const sx = e.clientX, sy = e.clientY;
+        let off = false;
+        const mv = (ev) => {
+          if (!off && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 6) {
+            off = true;
+            div.setAttribute('draggable', 'false'); // browser assume seleção
+          }
+        };
+        const up = () => {
+          window.removeEventListener('mousemove', mv);
+          window.removeEventListener('mouseup', up);
+          // restaura o drag depois que a seleção termina
+          setTimeout(() => { if (!el_isEditing()) div.setAttribute('draggable', 'true'); }, 60);
+        };
+        const el_isEditing = () => div.isContentEditable || div.classList.contains('editing');
+        window.addEventListener('mousemove', mv);
+        window.addEventListener('mouseup', up);
+      });
 
       const editedMark = n.edited ? '<span class="edited">editada</span>' : '';
       const meta = `<span class="meta">${editedMark}${n.pending ? 'enviando…' : fmtTime(n.ts)}</span>`;

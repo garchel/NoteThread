@@ -29,24 +29,50 @@ bindSearch() {
         }
       });
     },
+    _parseSearch(q) {
+      const tokens = q.trim().split(/\s+/);
+      let textParts = [], inFilter = null, tagFilter = null, depois = null, antes = null;
+      for (const tok of tokens) {
+        const low = tok.toLowerCase();
+        if (low.startsWith('in:') && low.length > 3) inFilter = tok.slice(3);
+        else if (low.startsWith('#') && low.length > 1) tagFilter = tok.slice(1);
+        else if (low.startsWith('depois:') && low.length > 7) {
+          const d = new Date(tok.slice(7)); if (!isNaN(d)) depois = d;
+        } else if (low.startsWith('antes:') && low.length > 6) {
+          const d = new Date(tok.slice(6)); if (!isNaN(d)) antes = d;
+        } else textParts.push(tok);
+      }
+      return { text: textParts.join(' ').trim(), textLower: textParts.join(' ').toLowerCase(), inFilter: inFilter ? inFilter.toLowerCase() : null, tagFilter: tagFilter ? tagFilter.toLowerCase() : null, depois, antes };
+    },
     runSearch(q, results, clear) {
       if (!q) { this._searchShowAll = false; results.classList.add('hidden'); results.innerHTML = ''; clear.classList.add('hidden'); return; }
       clear.classList.remove('hidden');
-      const ql = q.toLowerCase();
-      // notas
+      const p = this._parseSearch(q);
       const hits = [];
-      const tagQ = ql.startsWith('#') ? ql.slice(1) : ql; // busca por #tag
       Object.entries(Store.data.notes).forEach(([tid, arr]) => {
         const th = Store.getThread(tid); if (!th) return;
+        // in: filtro por nome da thread
+        if (p.inFilter && !th.name.toLowerCase().includes(p.inFilter)) return;
         arr.forEach((n) => {
-          const inText = n.text && n.text.toLowerCase().includes(ql);
-          const inTag = n.tags && n.tags.some((t) => t.toLowerCase().includes(tagQ));
-          if (inText || inTag) hits.push({ tid, th, n });
+          if (p.depois && n.ts < p.depois.getTime()) return;
+          if (p.antes && n.ts > p.antes.getTime()) return;
+          if (p.tagFilter) {
+            if (!n.tags || !n.tags.some((t) => t.toLowerCase().includes(p.tagFilter))) return;
+          }
+          // texto livre (se vazio, já passou pelos filtros)
+          if (p.text) {
+            const inText = n.text && n.text.toLowerCase().includes(p.textLower);
+            if (!inText) return;
+          }
+          hits.push({ tid, th, n });
         });
       });
-      // threads (por nome)
       Store.threadList().forEach((th) => {
-        if (th.name && th.name.toLowerCase().includes(ql)) hits.push({ tid: th.id, th, n: null });
+        if (p.tagFilter || p.depois || p.antes) return; // filtros de nota não aplicam a thread vazia
+        if (p.inFilter && !th.name.toLowerCase().includes(p.inFilter)) return;
+        if (p.text && !th.name.toLowerCase().includes(p.textLower)) return;
+        if (!p.text && !p.inFilter) return;
+        hits.push({ tid: th.id, th, n: null });
       });
       // ordena: nota mais recente primeiro
       hits.sort((a, b) => (b.n ? b.n.ts : 0) - (a.n ? a.n.ts : 0));
@@ -59,14 +85,21 @@ bindSearch() {
       const showAll = this._searchShowAll;
       const visible = showAll ? hits : hits.slice(0, max);
       const extra = hits.length - visible.length;
+      const hl = p.text || p.tagFilter || p.inFilter || '';
       const itemHtml = visible.map((h) => {
         if (h.n) {
-          const idx = h.n.text.toLowerCase().indexOf(ql);
-          const start = Math.max(0, idx - 24);
-          const snippet = (start > 0 ? '…' : '') + h.n.text.slice(start, start + 80);
+          let snippet = h.n.text.slice(0, 80);
+          if (p.text) {
+            const idx = h.n.text.toLowerCase().indexOf(p.textLower);
+            const start = Math.max(0, idx - 24);
+            snippet = (start > 0 ? '…' : '') + h.n.text.slice(start, start + 80);
+          }
+          const escSnippet = esc(snippet);
+          const highlighted = hl ? escSnippet.replace(new RegExp('(' + hl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<mark>$1</mark>') : escSnippet;
+          const tagLine = h.n.tags && h.n.tags.length ? `<div class="sr-tags">${h.n.tags.map(t=>`#${esc(t)}`).join(' ')}</div>` : '';
           return `<button class="search-result" data-tid="${h.tid}" data-cid="${h.n.clientId}">
             <div class="sr-thread">${wrapSvg(ICON.bubble, 13)} ${esc(h.th.name || 'Sem título')}</div>
-            <div class="sr-text">${esc(snippet).replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'), '<mark>$1</mark>')}</div>
+            <div class="sr-text">${highlighted}</div>${tagLine}
             <div class="sr-meta">${fmtTime(h.n.ts)}${h.n.edited ? ' · editada' : ''}</div>
           </button>`;
         }
@@ -78,7 +111,12 @@ bindSearch() {
       const extraHtml = (extra > 0)
         ? `<button class="search-more" id="sr-more">+${extra} resultado${extra !== 1 ? 's' : ''} — mostrar tudo</button>`
         : '';
-      const countHtml = `<div class="sr-count">${hits.length} resultado${hits.length !== 1 ? 's' : ''}</div>`;
+      const filterChips = [];
+      if (p.inFilter) filterChips.push(`em: ${esc(p.inFilter)}`);
+      if (p.tagFilter) filterChips.push(`#${esc(p.tagFilter)}`);
+      if (p.depois) filterChips.push(`depois: ${p.depois.toLocaleDateString('pt-BR')}`);
+      if (p.antes) filterChips.push(`antes: ${p.antes.toLocaleDateString('pt-BR')}`);
+      const countHtml = `<div class="sr-count">${hits.length} resultado${hits.length !== 1 ? 's' : ''}${filterChips.length ? ` · filtros: ${filterChips.join(', ')}` : ''}</div>`;
       results.innerHTML = countHtml + itemHtml + extraHtml;
       results.querySelectorAll('.search-result').forEach((b) => b.addEventListener('click', () => {
         const tid = b.dataset.tid, cid = b.dataset.cid;
@@ -158,6 +196,10 @@ bindSearch() {
     showShortcutsHelp() {
       const rows = [
         ['Ctrl/⌘ + K', 'Buscar notas e conversas'],
+        ['in:trabalho', 'Filtrar por conversa'],
+        ['#urgente', 'Filtrar por tag'],
+        ['depois:2026-01-01', 'Após data'],
+        ['antes:2026-12-31', 'Antes de data'],
         ['Ctrl/⌘ + N', 'Nova conversa'],
         ['Ctrl/⌘ + Shift + F', 'Nova pasta'],
         ['Ctrl/⌘ + [ / ]', 'Conversa anterior / próxima'],

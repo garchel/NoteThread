@@ -17,7 +17,9 @@ jobs:
           cache: 'npm'
       - run: npm ci || npm install
       - name: Lint (syntax check)
-        run: node --check server/www.js && node --check server/sync.js && node --check public/app.js
+        run: npm run check
+      - name: Tests
+        run: npm test
       - name: Start server + health check
         run: |
           PORT=3001 node server/www.js &

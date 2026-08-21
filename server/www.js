@@ -4,6 +4,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { installSync } = require('./sync');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
@@ -20,14 +21,14 @@ function setSecurityHeaders(res) {
   res.setHeader('X-XSS-Protection', '0');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  // CSP leve: permite self + fonts/google + esm.sh/cuelume
+  // CSP leve: permite self + fonts/google + esm.sh/cuelume + supabase
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://esm.sh",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
-    "connect-src 'self' ws: wss: https://esm.sh",
+    "connect-src 'self' ws: wss: https://esm.sh https://*.supabase.co wss://*.supabase.co",
     "manifest-src 'self'",
   ].join('; '));
 }
@@ -53,11 +54,22 @@ const server = http.createServer((req, res) => {
     if (err) { setSecurityHeaders(res); res.writeHead(404); return res.end('Not found'); }
     const ext = path.extname(file);
     setSecurityHeaders(res);
-    res.writeHead(200, {
+    const headers = {
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Cache-Control': cacheHeader(ext),
-    });
-    res.end(data);
+    };
+    // gzip para js/css/svg (W2.6 perf)
+    const accept = req.headers['accept-encoding'] || '';
+    const shouldGzip = accept.includes('gzip') && ['.js','.css','.svg','.webmanifest','.json'].includes(ext) && data.length > 1024;
+    if (shouldGzip) {
+      headers['Content-Encoding'] = 'gzip';
+      headers['Vary'] = 'Accept-Encoding';
+      res.writeHead(200, headers);
+      res.end(zlib.gzipSync(data));
+    } else {
+      res.writeHead(200, headers);
+      res.end(data);
+    }
   });
 });
 

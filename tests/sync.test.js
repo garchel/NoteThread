@@ -1,0 +1,24 @@
+const { describe, it } = require('node:test');
+const assert = require('node:assert/strict');
+const { readFileSync } = require('fs');
+
+// Verifica que supabase.sql tem RLS + Realtime
+describe('supabase.sql', ()=>{
+  const sql = readFileSync('supabase.sql','utf8');
+  it('tem tabelas', ()=>{ assert.match(sql, /create table if not exists threads/); assert.match(sql, /create table if not exists notes/); });
+  it('tem RLS', ()=>{ assert.match(sql, /enable row level security/); assert.match(sql, /auth\.uid\(\) = user_id/); });
+  it('tem Realtime', ()=>{ assert.match(sql, /supabase_realtime add table notes/); });
+});
+
+// Verifica manifest e icons
+describe('PWA', ()=>{
+  it('manifest tem 4 icons', ()=>{
+    const m = JSON.parse(readFileSync('public/manifest.webmanifest','utf8'));
+    assert.equal(m.icons.length,4);
+    assert.ok(m.icons.find(i=>i.sizes==='1024x1024'));
+  });
+  it('sw.js é v9', ()=>{
+    const sw=readFileSync('public/sw.js','utf8');
+    assert.match(sw, /notethread-v9/);
+  });
+});

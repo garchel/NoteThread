@@ -359,11 +359,11 @@
     async connect() {
       this.setStatus('connecting');
       if (!USE_SUPABASE) return WSSync.connect.call(this);
+      const t = setTimeout(() => { if (!this.connected) { this.setStatus('offline'); console.warn('[supabase] connect timeout'); } }, 8000);
       try {
         const m = await import('https://esm.sh/@supabase/supabase-js@2');
         this.supa = m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const { data: { session } } = await this.supa.auth.getSession();
-        // escuta auth
         this.supa.auth.onAuthStateChange((_ev, sess) => {
           if (sess && sess.user) {
             Store.setUser({ name: sess.user.email.split('@')[0], mail: sess.user.email, provider: 'supabase', id: sess.user.id });
@@ -373,10 +373,16 @@
         if (session && session.user) {
           Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
         }
-        this.connected = true; this.setStatus('online');
+        this.connected = true; this.setStatus('online'); clearTimeout(t);
         await this.loadSnapshot();
         this.subscribe();
-      } catch (e) { console.warn('[supabase] connect fail', e); this.setStatus('offline'); }
+        // verifica subscrição após 2s
+        setTimeout(async () => {
+          if (this.channel && this.channel.state !== 'joined' && this.channel.state !== 'subscribed') {
+            console.warn('[supabase] channel not joined', this.channel.state);
+          }
+        }, 2000);
+      } catch (e) { clearTimeout(t); console.warn('[supabase] connect fail', e); this.setStatus('offline'); }
     },
     async loadSnapshot() {
       const [th, fo, no] = await Promise.all([
@@ -1808,11 +1814,21 @@
       // inicializa com estado correto (evita scrollbar fantasma no carregamento)
       resize();
       ta.addEventListener('focus', () => {
-        // No mobile, rola para o composer ficar visível acima do teclado
-        setTimeout(() => {
-          ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 300);
+        setTimeout(() => { ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 300);
       });
+      // visualViewport: quando teclado virtual muda altura, mantém composer visível
+      if (window.visualViewport) {
+        let lastH = window.visualViewport.height;
+        window.visualViewport.addEventListener('resize', () => {
+          const curH = window.visualViewport.height;
+          if (curH < lastH - 80 && document.activeElement === ta) {
+            setTimeout(() => ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+          }
+          lastH = curH;
+        });
+      }
+      // pull-to-refresh nos messages (puxar topo recarrega)
+      this._initPullToRefresh();
       ta.addEventListener('keydown', (e) => {
         const mod = e.ctrlKey || e.metaKey;
         if (mod && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); this.applyFormat('bold'); }
@@ -1840,6 +1856,22 @@
       });
       this.attachPreview = prev;
       this.setupInfiniteScroll();
+    },
+    _initPullToRefresh() {
+      const box = $('#messages'); if (!box) return;
+      let startY = 0, pulling = false;
+      box.addEventListener('touchstart', (e) => { if (box.scrollTop <= 2) startY = e.touches[0].clientY; }, { passive: true });
+      box.addEventListener('touchmove', (e) => {
+        if (!startY) return;
+        const dy = e.touches[0].clientY - startY;
+        if (dy > 70 && box.scrollTop <= 2) { pulling = true; box.style.transform = `translateY(${Math.min(36, (dy-70)/2.5)}px)`; box.style.transition = 'none'; }
+      }, { passive: true });
+      const reset = () => { box.style.transform = ''; box.style.transition = 'transform .2s ease'; startY = 0; };
+      box.addEventListener('touchend', () => {
+        if (pulling) { pulling = false; reset(); this.toast('Atualizando…', { kind: 'info' }); setTimeout(() => location.reload(), 300); return; }
+        reset(); pulling = false;
+      }, { passive: true });
+      box.addEventListener('touchcancel', reset, { passive: true });
     },
     renderAttachPreview() {
       const prev = this.dom.attachPreview;

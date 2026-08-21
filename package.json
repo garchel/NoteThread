@@ -6,9 +6,13 @@
     "start": "node server/start.js",
     "server": "node server/index.js",
     "check": "node --check server/www.js && node --check server/sync.js && node --check public/app.js && echo \"syntax ok\"",
+    "test": "node --test tests/*.test.js",
     "health": "node server/www.js"
   },
   "dependencies": {
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.3"
   }
 }

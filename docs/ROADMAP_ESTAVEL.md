@@ -117,7 +117,7 @@
 
 | # | Task | Detalhe | Aceite |
 |---|------|---------|--------|
-| A6.4 | ✅ **Quebrar o `app.js`** | Implementado `a9a2c70`: 13 ES Modules nativos (`js/utils,icons,emojis,markdown,store,sound,sync-supabase` + `js/ui/picker,navigation,messages,mentions,reminders`) — sem build step; `app.js` virou entry/core de 1.270 linhas (próxima iteração: extrair tree/settings/auth/composer). E2e Playwright valida o fluxo crítico pós-refactor | ✅ Sem bundler; e2e verde |
+| A6.4 | ✅ **Quebrar o `app.js`** | Concluído `775e540`: 18 ES Modules (`js/*` + `js/ui/*`). Onda 1 `a9a2c70` (1.270 linhas) + Onda 2 `775e540` extraiu `settings/auth/tree/composer/sync-events` → `app.js` final **195 linhas**, todos <500. Sem build step, `sw.js v33` precacheia todos, e2e 2/2 verde | ✅ Sem bundler; e2e verde |
 | A6.5 | ✅ **Remover o legado** | Removido `17cdd5d`: `server/*` (www/sync/index/static/start), `Procfile`, `attachtest.js`, `WSSync`/`SYNC_URL` no app.js, dep `ws`. Sync = SupaSync direto; sem config → offline honesto | ✅ Deletado; deploy verde |
 | A6.6 | ✅ **Testes do fluxo real** | Implementado `17cdd5d`: Playwright + servidor estático zero-dep. 2 specs verdes: (1) criar thread → nota com checkbox → marcar → reload → persiste; (2) menção `@` → token → chip → navegação. Roda no CI (`ci.yml`) | ✅ `npm run e2e` verde local e CI |
 

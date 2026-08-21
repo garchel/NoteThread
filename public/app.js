@@ -95,9 +95,19 @@
     s = s.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
     // 5) #tags NÃO são convertidas aqui — são renderizadas em bloco separado (.bubble-tags) no bubbleEl
     // 6) listas: linhas começando com - ou *
+    // 7) checklist: linhas começando com [ ] ou [x]
     const lines = s.split('\n');
-    let html = '', inList = false;
+    let html = '', inList = false, inChk = false;
     for (const line of lines) {
+      const chk = line.match(/^\s*\[( |x)\]\s*(.*)$/i);
+      if (chk) {
+        if (inList) { html += '</ul>'; inList = false; }
+        if (!inChk) { html += '<div class="md-checklist">'; inChk = true; }
+        const done = chk[1].toLowerCase() === 'x';
+        html += `<label class="md-check${done ? ' done' : ''}"><input type="checkbox" ${done ? 'checked' : ''} disabled/><span>${chk[2]}</span></label>`;
+        continue;
+      }
+      if (inChk) { html += '</div>'; inChk = false; }
       const m = line.match(/^(\s*)[-*]\s+(.*)$/);
       if (m) {
         if (!inList) { html += '<ul class="md-list">'; inList = true; }
@@ -108,6 +118,7 @@
       }
     }
     if (inList) html += '</ul>';
+    if (inChk) html += '</div>';
     // remove <br/> solitário no final
     html = html.replace(/<br\/>\s*$/, '');
     return html;
@@ -1878,6 +1889,7 @@
         if (mod && (e.key === 'b' || e.key === 'B')) { e.preventDefault(); this.applyFormat('bold'); }
         else if (mod && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); this.applyFormat('italic'); }
         else if (mod && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.applyFormat('code'); }
+        else if (mod && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); this.applyFormat('checklist'); }
         else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendNote(); }
       });
       // barra de formatação
@@ -2063,7 +2075,32 @@
       if (kind === 'bold') { wrap = '**'; placeholder = 'negrito'; }
       else if (kind === 'italic') { wrap = '*'; placeholder = 'itálico'; }
       else if (kind === 'code') { wrap = '`'; placeholder = 'código'; }
-      else if (kind === 'list') {
+      else if (kind === 'checklist') {
+        // checklist: prefixa cada linha com "[ ]" (toggle para [x] se já for checkbox)
+        const inner = sel || '';
+        let listed;
+        const prefixChk = (l) => {
+          if (/^\[x\]\s/i.test(l)) return l.replace(/^\[x\]\s/i, '[ ] ');
+          if (/^\[\s?\]\s/.test(l)) return l.replace(/^\[\s?\]\s/, '[ ] ');
+          return '[ ] ' + l;
+        };
+        if (inner) {
+          listed = inner.split('\n').map(prefixChk).join('\n');
+          ta.value = before + listed + after;
+          ta.selectionStart = start; ta.selectionEnd = start + listed.length;
+        } else {
+          const lineStart = before.lastIndexOf('\n') + 1;
+          const lineHead = before.slice(0, lineStart);
+          const curLine = before.slice(lineStart);
+          let newLine;
+          if (/^\[ \] /.test(curLine)) newLine = curLine; // já é checkbox, não duplica
+          else newLine = prefixChk(curLine);
+          ta.value = lineHead + newLine + after;
+          ta.selectionStart = ta.selectionEnd = lineStart + newLine.length;
+        }
+        ta.focus(); ta.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      } else if (kind === 'list') {
         // lista: prefixa cada linha da seleção (ou insere "- " no cursor se vazio).
         const inner = sel || '';
         let listed;

@@ -799,6 +799,23 @@ button:focus { outline: none; }
 [data-theme="midnight"] .bubble code { background: rgba(255,255,255,.12); color: #d9d2ff; }
 .bubble .md-list { margin: 4px 0 2px; padding-left: 20px; }
 .bubble .md-list li { margin: 2px 0; line-height: 1.45; }
+
+/* Checklist nas notas ([ ] / [x]) */
+.md-checklist { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 2px; }
+.md-check {
+  display: flex; align-items: flex-start; gap: 8px; cursor: default; line-height: 1.45;
+}
+.md-check input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; flex-shrink: 0;
+  width: 16px; height: 16px; margin-top: 2px; border-radius: 5px;
+  border: 1.5px solid currentColor; opacity: .85; position: relative; cursor: pointer;
+}
+.md-check input[type="checkbox"]:checked { background: rgba(255,255,255,.9); border-color: transparent; }
+.md-check input[type="checkbox"]:checked::after {
+  content: ""; position: absolute; left: 4.5px; top: 1.5px; width: 4px; height: 8px;
+  border: solid var(--accent); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.md-check.done span { text-decoration: line-through; opacity: .6; }
 .bubble.remote code { background: rgba(0,0,0,.12); }
 
 /* ===================== LIGHTBOX DE IMAGENS ===================== */

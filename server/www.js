@@ -28,7 +28,7 @@ function setSecurityHeaders(res) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
-    "connect-src 'self' ws: wss: https://esm.sh https://*.supabase.co wss://*.supabase.co",
+    "connect-src 'self' ws: wss: https://esm.sh https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com",
     "manifest-src 'self'",
   ].join('; '));
 }

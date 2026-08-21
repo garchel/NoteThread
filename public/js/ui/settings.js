@@ -24,6 +24,10 @@ bindSettings() {
       // ordenação ativa
       const sort = (Store.data && Store.data.ui && Store.data.ui.sort) || 'recent';
       p.querySelectorAll('[data-set="sort"]').forEach((b) => b.classList.toggle('active', b.dataset.val === sort));
+      // densidade ativa
+      const density = (Store.data && Store.data.ui && Store.data.ui.density) || 'comfortable';
+      document.documentElement.dataset.density = density;
+      p.querySelectorAll('[data-set="density"]').forEach((b) => b.classList.toggle('active', b.dataset.val === density));
       // aplica o tema salvo (resolve "auto")
       this.applyTheme();
       // reage a mudanças de tema do sistema quando em "auto"
@@ -101,6 +105,10 @@ handleSetting(act, val) {
         Store.data.ui = Store.data.ui || {}; Store.data.ui.sort = val; Store.save();
         this.renderTree();
         this.dom.settingsPopover.querySelectorAll('[data-set="sort"]').forEach((b) => b.classList.toggle('active', b.dataset.val === val));
+      } else if (act === 'density') {
+        Store.data.ui = Store.data.ui || {}; Store.data.ui.density = val; Store.save();
+        document.documentElement.dataset.density = val;
+        this.dom.settingsPopover.querySelectorAll('[data-set="density"]').forEach((b) => b.classList.toggle('active', b.dataset.val === val));
       } else if (act === 'export') {
         const data = JSON.stringify({ threads: Store.data.threads, folders: Store.data.folders, notes: Store.data.notes }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });

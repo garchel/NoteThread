@@ -132,6 +132,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 .hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 /* ===================== AUTH ===================== */
 .auth-screen {
@@ -880,6 +881,15 @@ button:focus { outline: none; }
 /* Toast mais amigável */
 .app-toast { border-radius: 14px; padding: 11px 20px; font-size: 14px; }
 
+/* Densidade adaptativa */
+[data-density="compact"] .tnode { padding: 6px 8px; font-size: 13px; }
+[data-density="compact"] .bubble { padding: 8px 12px; font-size: 14px; }
+[data-density="compact"] .composer { padding: 8px 10px; }
+@media (max-height: 700px) and (min-width: 761px) {
+  .tnode { padding: 6px 8px; }
+  .bubble { padding: 8px 12px; font-size: 14px; }
+}
+
 /* ===================== MARKDOWN NAS NOTAS ===================== */
 .bubble strong { font-weight: 700; }
 .bubble em { font-style: italic; }
@@ -1117,4 +1127,12 @@ button:focus { outline: none; }
 /* Nova conversa card na sidebar: entrada */
 .empty-tree {
   animation: emptyIn .2s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

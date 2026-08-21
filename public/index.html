@@ -110,7 +110,8 @@
           <button id="btn-settings" class="btn-icon-sm header-btn" title="Configurações"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
         </header>
 
-        <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Mensagens da conversa">
+        <div id="live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+        <div id="messages" class="messages" role="log" aria-live="off" aria-relevant="additions text" aria-atomic="false" aria-label="Mensagens da conversa">
           <div id="load-older" class="load-older hidden">Carregar mensagens anteriores…</div>
           <div id="empty-state" class="empty-state">
             <div class="empty-emoji"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 9 9 0 0 1-4-1L3 20l1.5-5.5a8.5 8.5 0 1 1 16.5-3z"/></svg></div>
@@ -181,6 +182,13 @@
         <button class="seg-btn" data-set="sort" data-val="recent" title="Mais recentes">Recentes</button>
         <button class="seg-btn" data-set="sort" data-val="name" title="Ordem alfabética">Nome</button>
         <button class="seg-btn" data-set="sort" data-val="manual" title="Arraste para ordenar">Manual</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-label">Densidade</div>
+      <div class="seg" id="density-seg">
+        <button class="seg-btn" data-set="density" data-val="comfortable" title="Confortável">Confortável</button>
+        <button class="seg-btn" data-set="density" data-val="compact" title="Compacta">Compacta</button>
       </div>
     </div>
     <div class="settings-section">

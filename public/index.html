@@ -219,10 +219,14 @@
     </div>
   </div>
 
-  <!-- CONFIGURAÇÃO (APK/produção): descomente e defina a URL do servidor de sync.
-       No desenvolvimento local (npm start) deixe vazio para usar http://HOST:3001 automaticamente.
-  <script>window.NOTE_THREAD_SYNC_URL = 'wss://notethread.seu-servidor.com';</script>
-  -->
+  <!-- CONFIGURAÇÃO Supabase (v1 free): defina antes de app.js. Para dev local com Node WS, deixe vazio. -->
+  <script>
+    // Preencha após criar projeto Supabase (Settings → API) ou via Vercel Env Vars
+    window.SUPABASE_URL = window.SUPABASE_URL || '';
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+    // Fallback WS legado (se não usar Supabase)
+    // window.NOTE_THREAD_SYNC_URL = 'wss://seuapp.onrender.com';
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,13 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#a78bfa"/>
-      <stop offset="1" stop-color="#f0abfc"/>
+      <stop offset="0" stop-color="#7c5cff"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.85"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#g)"/>
-  <path d="M170 150 C120 150 90 195 90 245 c0 36 18 62 40 82 l-30 120 a16 16 0 0 0 20 19 l120 -90 c20 6 42 10 64 10 80 0 128 -55 128 -125 C532 150 484 150 484 150 Z" fill="#fff" opacity="0.95"/>
-  <circle cx="200" cy="225" r="20" fill="#7c5cff"/>
-  <circle cx="270" cy="225" r="20" fill="#7c5cff"/>
-  <circle cx="340" cy="225" r="20" fill="#7c5cff"/>
+  <rect width="512" height="512" rx="120" fill="url(#g)"/>
+  <!-- thread spool -->
+  <g transform="translate(256,256)">
+    <ellipse cx="0" cy="38" rx="92" ry="28" fill="#2b2740" opacity="0.18"/>
+    <!-- thread body -->
+    <rect x="-74" y="-96" width="148" height="168" rx="22" fill="url(#g2)" stroke="#ffffff" stroke-opacity="0.3" stroke-width="2"/>
+    <!-- lines representing threads -->
+    <rect x="-52" y="-68" width="104" height="14" rx="7" fill="#7c5cff" opacity="0.95"/>
+    <rect x="-52" y="-42" width="84" height="10" rx="5" fill="#7c5cff" opacity="0.55"/>
+    <rect x="-52" y="-18" width="96" height="10" rx="5" fill="#7c5cff" opacity="0.35"/>
+    <rect x="-52" y="6" width="72" height="10" rx="5" fill="#7c5cff" opacity="0.25"/>
+    <!-- needle hint -->
+    <circle cx="48" cy="-82" r="10" fill="#f5b942" stroke="#fff" stroke-width="3"/>
+  </g>
 </svg>

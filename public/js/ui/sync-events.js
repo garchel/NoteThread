@@ -12,22 +12,22 @@ bindSync() {
         if (this.activeThread) { this.oldestTs = null; this.renderMessages(true); this.updatePinButton(); }
       });
       Sync.on('note:upsert', (n) => {
-        // o servidor já exclui o remetente, então qualquer evento aqui veio de OUTRO dispositivo
         Store.upsertNote(n);
         if (this.activeThread === n.threadId) this.appendNoteRealtime(n);
         this.updateNoteCount();
+        // atualiza backlinks se a thread aberta foi mencionada
+        if (this.activeThread && n.text && n.text.includes(`(t:${this.activeThread})`)) this.renderBacklinks(this.activeThread);
         const th = Store.getThread(n.threadId);
-        this.toast(`Nova nota em "${th ? th.name : 'conversa'}"`, { kind: 'success' });
+        if (this.activeThread !== n.threadId) this.toast(`Nova nota em "${th ? th.name : 'conversa'}"`, { kind: 'success' });
       });
       Sync.on('note:edit', ({ threadId, clientId, text, edited, editedAt, rev }) => {
         const arr = Store.notesFor(threadId); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
-        // resolução de conflito: last-write-wins por timestamp (editado mais recente vence).
-        // em empate, desempata pelo contador de revisão (rev) — quem editou "depois" tem rev maior.
         const incoming = editedAt || 0, local = n.editedAt || 0;
         const incomingRev = rev || 0, localRev = n.rev || 0;
-        if (incoming < local || (incoming === local && incomingRev <= localRev)) return; // mantém o local
+        if (incoming < local || (incoming === local && incomingRev <= localRev)) return;
         n.text = text; n.edited = edited; n.editedAt = editedAt; n.rev = incomingRev; Store.save();
         if (this.activeThread === threadId) this._replaceBubble(clientId, n);
+        if (this.activeThread && text && text.includes(`(t:${this.activeThread})`)) this.renderBacklinks(this.activeThread);
       });
       Sync.on('note:tags', ({ threadId, clientId, tags }) => {
         const arr = Store.notesFor(threadId); const n = arr.find((x) => x.clientId === clientId); if (!n) return;

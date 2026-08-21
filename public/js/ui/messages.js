@@ -22,7 +22,29 @@ openThread(id) {
       document.querySelectorAll('.tnode.active').forEach((el) => el.classList.remove('active'));
       document.querySelectorAll(`.tnode[data-tid="${id}"]`).forEach((el) => el.classList.add('active'));
       this.renderMessages(true);
+      this.renderBacklinks(id);
       this.setChatActiveUi(true);
+    },
+    renderBacklinks(threadId) {
+      const container = document.getElementById('backlinks');
+      if (!container) return;
+      const pattern = new RegExp(`@\\[.*?\\]\\(t:${threadId}\\)`, 'i');
+      const backlinks = [];
+      Object.entries(Store.data.notes).forEach(([tid, notes]) => {
+        if (tid === threadId) return;
+        const th = Store.getThread(tid);
+        notes.forEach(n => {
+          if (pattern.test(n.text)) backlinks.push({ tid, th, n });
+        });
+      });
+      if (!backlinks.length) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+      container.innerHTML = `<div class="backlinks-title">Mencionado em ${backlinks.length} nota${backlinks.length!==1?'s':''}</div>` +
+        backlinks.map(b => `<div class="backlink-item" data-tid="${b.tid}" data-cid="${b.n.clientId}"><span class="backlink-thread">${esc(b.th ? b.th.name : 'Conversa')}</span><span class="backlink-snippet">${esc(b.n.text.slice(0,60))}</span></div>`).join('');
+      container.classList.remove('hidden');
+      container.querySelectorAll('.backlink-item').forEach(el => el.addEventListener('click', () => {
+        this.openThread(el.dataset.tid);
+        setTimeout(() => this.scrollToNote(el.dataset.cid), 300);
+      }));
     },
     setChatActiveUi(show) {
       const el = $('#chat-active-ui');

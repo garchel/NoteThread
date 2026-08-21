@@ -1,5 +1,6 @@
 import { $ } from './utils.js';
 import { Store } from './store.js';
+import { OfflineQueue } from './offline-queue.js';
 
 // CONFIGURAÇÃO DE SINCRONIZAÇÃO (Supabase — definido em index.html)
   // ---------------------------------------------------------------------
@@ -142,27 +143,32 @@ import { Store } from './store.js';
         this.channel = ch;
       });
     },
-    // fila de eventos que falharam — persistida em localStorage e reenviada ao conectar
-    _queueKey: 'notethread.syncq',
-    _loadQueue() { try { return JSON.parse(localStorage.getItem(this._queueKey) || '[]'); } catch { return []; } },
-    _saveQueue(q) { try { localStorage.setItem(this._queueKey, JSON.stringify(q.slice(-200))); } catch {} },
-    _enqueue(type, payload) {
-      const q = this._loadQueue();
-      q.push({ type, payload, ts: Date.now() });
-      this._saveQueue(q);
+    // fila offline robusta — IndexedDB com backoff exponencial + Background Sync
+    async _enqueue(type, payload) {
+      await OfflineQueue.add(type, payload);
+      OfflineQueue.registerSync();
+      // fallback para offline: tenta reenviar quando voltar online
+      window.addEventListener('online', () => this.flushQueue(), { once: true });
     },
     async flushQueue() {
-      const q = this._loadQueue();
+      const q = await OfflineQueue.getAll();
       if (!q.length || !this.supa) return;
-      const rest = [];
+      const nowTs = Date.now();
       for (const item of q) {
+        if (item.nextRetry && item.nextRetry > nowTs) continue;
         try {
           this.lastSync = Date.now();
-          await this._doSend(item.type, item.payload); // lança se falhar
-        } catch (e) { rest.push(item); }
+          await this._doSend(item.type, item.payload);
+          await OfflineQueue.remove(item.id);
+        } catch (e) {
+          await OfflineQueue.bump(item.id);
+        }
       }
-      this._saveQueue(rest);
-      if (q.length && !rest.length && window.NoteThread && window.NoteThread.UI) window.NoteThread.window.NoteThread.UI.toast('Sincronização restaurada', { kind: 'success' });
+      const rest = await OfflineQueue.getAll();
+      if (!q.length || !rest.length) {
+        if (window.NoteThread && window.NoteThread.UI) window.NoteThread.UI.toast('Sincronização restaurada', { kind: 'success' });
+        this._warnedFail = false;
+      }
     },
     async send(type, payload) {
       if (!this.supa) return;
@@ -171,7 +177,7 @@ import { Store } from './store.js';
         await this._doSend(type, payload);
       } catch (e) {
         console.warn('[supabase] send fail', type, e);
-        this._enqueue(type, payload); // tenta de novo ao reconectar
+        await this._enqueue(type, payload);
         if (!this._warnedFail && window.NoteThread && window.NoteThread.UI) {
           this._warnedFail = true;
           window.NoteThread.UI.toast('Falha ao sincronizar — será reenviado automaticamente', { kind: 'error' });

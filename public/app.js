@@ -192,6 +192,10 @@ showModal(title, bodyHtml, onOk) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (refreshed) return; refreshed = true; location.reload();
     });
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'notethread-sync' && Sync.flushQueue) Sync.flushQueue();
+    });
+    window.addEventListener('online', () => { if (Sync.flushQueue) Sync.flushQueue(); });
   }
 })();
 

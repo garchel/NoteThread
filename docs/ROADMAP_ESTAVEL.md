@@ -110,7 +110,7 @@
 | # | Task | Detalhe | Aceite |
 |---|------|---------|--------|
 | P6.1 | ✅ **Busca com filtros** | Implementado `7a86cd5`: `in:trabalho` (conversa), `#tag`, `depois:YYYY-MM-DD`, `antes:YYYY-MM-DD` + chips no contador + placeholder. Ex: `in:trabalho #urgente depois:2026-01-01` | ✅ Filtros funcionam |
-| P6.2 | ✅ **Backlinks/menções** | Implementado `73a38e7`: `@` abre autocomplete no composer; token `@[Nome](t:id)` persistido; chip clicável navega para a thread. Falta: seção "mencionado em" (backlink reverso) na thread citada | ✅ `@` abre autocomplete; chip navegável · ⏳ backlink reverso |
+| P6.2 | ✅ **Backlinks/menções** | Concluído `f29aa7a`: `@` autocomplete + token `@[Nome](t:id)` + chip navegável + seção "Mencionado em" na thread citada (scan de notas) | ✅ Bidirecional |
 | P6.3 | ✅ **Lembretes/notifications** | Implementado `73a38e7`: "Lembrar-me" no menu ▾ (datetime), colunas `remind_at/remind_fired`, scheduler 20s + Notification API + toast, badge ⏰ no explorador. Push com app fechado → v2 Capacitor (`V5.6`) | ✅ Notificação dispara com app aberto |
 
 ### Arquitetura (dívida que cobra juros)

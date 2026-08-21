@@ -1769,13 +1769,18 @@
       Sync.send('note:edit', { threadId: this.activeThread, clientId, text: n.text, edited: !!n.edited, editedAt: n.editedAt, rev: n.rev });
       const hideDone = !!(Store.data.ui && Store.data.ui.hideDoneChecks);
       if (hideDone && checked) {
-        // fade out suave do item marcado antes de reorganizar
+        // fade out suave e remoção DIRETA do nó (reflow automático do flex/gap)
         const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
-        const label = el && el.querySelector(`.md-check input[data-chk="${index}"]`);
-        if (label) {
-          const wrap = label.closest('.md-check');
-          wrap.classList.add('chk-out');
-          setTimeout(() => this._replaceBubble(clientId, n), 260);
+        const input = el && el.querySelector(`.md-check input[data-chk="${index}"]`);
+        const wrap = input && input.closest('.md-check');
+        if (wrap) {
+          wrap.style.maxHeight = wrap.scrollHeight + 'px'; // fixa altura atual p/ animar colapso
+          requestAnimationFrame(() => {
+            wrap.classList.add('chk-out');
+            const remove = () => { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+            wrap.addEventListener('transitionend', remove, { once: true });
+            setTimeout(remove, 350); // fallback
+          });
           return;
         }
       }

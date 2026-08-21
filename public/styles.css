@@ -879,8 +879,8 @@ button:focus { outline: none; }
 /* Modal de exclusão de nota */
 .del-note-hint { font-size: 13.5px; line-height: 1.55; color: var(--text-dim); margin-top: 4px; }
 /* fade out suave ao ocultar item concluído (setting hideDoneChecks) */
-.md-check { transition: opacity .25s ease, transform .25s ease, max-height .25s ease; max-height: 60px; overflow: hidden; }
-.md-check.chk-out { opacity: 0; transform: translateX(10px); max-height: 0; margin-bottom: -4px; }
+.md-check { transition: opacity .25s ease, transform .25s ease, max-height .25s ease; overflow: hidden; }
+.md-check.chk-out { opacity: 0; transform: translateX(10px); max-height: 0 !important; padding-top: 0; padding-bottom: 0; margin-bottom: -4px; border: none; }
 .bubble.remote code { background: rgba(0,0,0,.12); }
 
 /* ===================== LIGHTBOX DE IMAGENS ===================== */

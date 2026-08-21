@@ -33,7 +33,7 @@
   let _supaPromise = null;
   function getSupa() {
     if (!_supaPromise) {
-      _supaPromise = import('https://esm.sh/@supabase/supabase-js@2').then(m => m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+      _supaPromise = import('https://esm.sh/@supabase/supabase-js@2.112.3').then(m => m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
     }
     return _supaPromise;
   }

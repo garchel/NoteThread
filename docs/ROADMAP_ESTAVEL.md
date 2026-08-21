@@ -126,8 +126,8 @@
 | # | Task | Detalhe | Aceite |
 |---|------|---------|--------|
 | R6.7 | ✅ **Imagens em Storage** | Implementado `8a2ce32`: bucket `note-images` (public, RLS) + upload `5MB` via `supabase.storage` em `composer.js`, fallback `base64` offline. Snapshot não carrega bytes | ✅ Storage com fallback |
-| R6.8 | **Paginação real no servidor** | `limit(200)` no snapshot é paliativo; usar `.range()` com scroll infinito consultando o banco por página (notas antigas sob demanda) | Thread com 5k notas abre igualmente rápida |
-| R6.9 | **PWA update UX** | Auto-reload do SW resolve o bundle travado; um "What's new" no toast de update daria polimento (changelog curto por versão em `sw.js` ou JSON) | Toast mostra 1-2 linhas de novidades antes de recarregar |
+| R6.8 | ✅ **Paginação real no servidor** | Implementado `5608d07`: `SupaSync.fetchNotesPage` com `.range()` + `setupInfiniteScroll` busca no Supabase quando local esgotado, fallback offline | ✅ Thread com 5k notas abre rápido |
+| R6.9 | ✅ **PWA update UX** | Implementado `5608d07`: toast busca `CHANGELOG.md` e mostra 2 itens da última versão antes de recarregar | ✅ "What's new" no toast |
 
 ---
 

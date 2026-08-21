@@ -88,6 +88,19 @@
 | L4.4 | **Monetização**: AdMob / Play Billing **exigem Capacitor/Android Studio** — PWABuilder limitado | `PROGRESSO:68` | Decidir: TWA MVP vs Capacitor v2 |
 | L4.5 | Beta track interno (20 testers) + crash reports | Faltava | 0 crash em 3 dias |
 
+## FASE 5 — v2 (Capacitor + OAuth público externo)
+
+> Google Cloud avisa ao sair de `Testing` → `External` que precisa verificação. Anotar para quando publicar fora dos test users.
+
+| # | Task | Onde | Aceite |
+|---|------|------|--------|
+| V5.1 | **OAuth consent screen → External**: `Google Cloud → OAuth consent screen → User Type: External` → App name `NoteThread`, User support e-mail, App logo `icon-1024.png`, App domain `https://SEUAPP.vercel.app`, Authorized domains `vercel.app` + `supabase.co`, Dev e-mail | Cloud Console | Status `In production` |
+| V5.2 | **Scopes + Test users**: enquanto `Testing`, adicionar `test users` (`Supabase → Auth → Users`); para `External` solicitar `email` `profile` `openid` (não sensível, sem verificação extensa) | Cloud Console | Sem `Access blocked` |
+| V5.3 | **Domínio + Privacy**: publicar `public/privacy.html` + `public/terms.html` e colar URLs em `OAuth consent → Privacy policy / Terms of service` + `Authorized domains` | `public/privacy.html:1` | URLs válidas, Google aprova |
+| V5.4 | **Supabase URLs prod**: `Supabase → Authentication → URL Configuration → Site URL = https://SEUAPP.vercel.app` + `Additional Redirect URLs = https://SEUAPP.vercel.app/*` + `https://dcttsnttbtsvpnfwtoaj.supabase.co/auth/v1/callback` já em `Google → Authorized redirect URI` | Supabase | Login Google não dá `redirect_uri_mismatch` |
+| V5.5 | **Publicar App Google**: `OAuth consent → Publish App` → se pedir verificação, enviar para Google (leva 3-7 dias) — sem isso limite 100 contas teste | Cloud Console | `Published` |
+| V5.6 | **Capacitor v2**: migrar TWA → `npx cap add android`, `AdMob` + `Play Billing`, `splash` nativo, `push` | `L4.4` | AAB na Play |
+
 ---
 
 ## Ordem recomendada
@@ -96,7 +109,8 @@
 2. **Fase 1** (BD+Auth) → sem isso, perde dados e vaza isolamento.
 3. **Fase 3A+3B** + **W2.1** → mobile instalável.
 4. **Fase 2** (CI+testes) em paralelo → garante regressão.
-5. **Fase 4** → loja.
+5. **Fase 4** → loja (TWA).
+6. **Fase 5** → v2 externo (OAuth publicado + Capacitor).
 
 ## Como validar
 

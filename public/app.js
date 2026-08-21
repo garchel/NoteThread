@@ -2600,11 +2600,30 @@
   // registra o Service Worker (PWA / offline)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      // updateViaCache: 'none' garante que o navegador sempre baixe o sw.js
-      // novo e não use uma versão em cache para a verificação de update.
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
-        .then((reg) => { try { reg.update(); } catch {} })
+        .then((reg) => {
+          try { reg.update(); } catch {}
+          // novo SW instalou? avisa e oferece recarregar (evita bundle antigo travado)
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                UI.toast('Nova versão disponível', {
+                  kind: 'info',
+                  duration: 8000,
+                  action: { label: 'Recarregar', fn: () => location.reload() }
+                });
+              }
+            });
+          });
+        })
         .catch(() => { /* SW opcional */ });
+    });
+    // se um SW novo assumiu o controle após esta página carregar, recarrega 1×
+    let refreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshed) return; refreshed = true; location.reload();
     });
   }
 })();

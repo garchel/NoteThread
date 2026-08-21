@@ -1831,6 +1831,12 @@
       this.dragClientId = note.clientId;
       e.dataTransfer.effectAllowed = 'move';
       try { e.dataTransfer.setData('text/plain', note.clientId); } catch (_) {}
+      // sem ghost image (1px transparente)
+      try {
+        const img = new Image();
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        e.dataTransfer.setDragImage(img, 0, 0);
+      } catch (_) {}
       e.target.classList.add('dragging');
     },
     onDragOver(e, div) {

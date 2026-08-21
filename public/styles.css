@@ -420,8 +420,8 @@ body {
   border-bottom-right-radius: 8px; word-wrap: break-word; white-space: pre-wrap;
   position: relative; line-height: 1.5; font-size: 15px;
   box-shadow: 0 4px 14px rgba(124, 92, 255, .25);
-  transition: transform .12s, box-shadow .15s, opacity .15s;
-  cursor: grab;
+  transition: box-shadow .15s, opacity .15s;
+  user-select: text; -webkit-user-select: text; /* permite selecionar/copiar o texto */
 }
 .bubble.dragging { opacity: .5; transform: scale(.98); cursor: grabbing; }
 .bubble.drag-over::before {
@@ -435,22 +435,29 @@ body {
 .bubble.pending { opacity: .6; }
 
 /* Seta ▾ no canto inferior direito (abre popover da mensagem) */
+/* área de toque generosa (44px) mas o CÍRCULO visível é só ~4px maior que o ícone */
 .bubble .msg-toggle {
-  position: absolute; right: 4px; bottom: 4px; width: 44px; height: 44px;
-  margin-right: -8px; margin-bottom: -8px; /* expande a área de toque sem cobrir o texto */
-  background: rgba(255,255,255,.18); border: none; color: #fff; border-radius: 50%;
-  cursor: pointer; display: grid; place-items: center; font-size: 11px; line-height: 1;
+  position: absolute; right: 2px; bottom: 2px; width: 44px; height: 44px;
+  background: transparent; border: none; color: #fff; border-radius: 50%;
+  cursor: pointer; display: grid; place-items: center; line-height: 1;
   opacity: 0; transition: opacity .15s, background .15s, transform .1s;
   z-index: 3;
 }
+.bubble .msg-toggle svg { width: 14px; height: 14px; }
 .bubble:hover .msg-toggle, .bubble .msg-toggle:focus, .bubble .msg-toggle:focus-visible { opacity: 1; }
 /* touch: sempre visível (não há hover) */
 @media (hover: none) {
-  .bubble .msg-toggle { opacity: .55; background: rgba(255,255,255,.12); width: 40px; height: 40px; }
+  .bubble .msg-toggle { opacity: .55; width: 40px; height: 40px; }
 }
-.bubble .msg-toggle:hover { background: rgba(255,255,255,.32); transform: scale(1.08); }
-.bubble.remote .msg-toggle { background: rgba(124, 92, 255, .12); color: var(--accent); }
-.bubble.remote .msg-toggle:hover { background: rgba(124, 92, 255, .22); }
+/* círculo do hover = só o miolo (~20px), desenhado num pseudo-elemento */
+.bubble .msg-toggle::before {
+  content: ""; position: absolute; inset: 50%; width: 22px; height: 22px;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: rgba(255,255,255,.28); opacity: 0; transition: opacity .12s;
+}
+.bubble.remote .msg-toggle::before { background: rgba(124, 92, 255, .18); }
+.bubble .msg-toggle:hover::before { opacity: 1; }
+.bubble .msg-toggle > * { position: relative; z-index: 1; }
 
 .bubble .pin-badge {
   position: absolute; top: -8px; left: -8px; background: var(--gold); color: #fff;

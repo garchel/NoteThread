@@ -101,6 +101,34 @@
 | V5.5 | **Publicar App Google**: `OAuth consent → Publish App` → se pedir verificação, enviar para Google (leva 3-7 dias) — sem isso limite 100 contas teste | Cloud Console | `Published` |
 | V5.6 | **Capacitor v2**: migrar TWA → `npx cap add android`, `AdMob` + `Play Billing`, `splash` nativo, `push` | `L4.4` | AAB na Play |
 
+## FASE 6 — Melhorias de produto & arquitetura (backlog priorizado)
+
+> Levantamento 21/08/2026 após estabilização v1. Ordem = impacto ÷ esforço.
+
+### Produto (diferencial visível)
+
+| # | Task | Detalhe | Aceite |
+|---|------|---------|--------|
+| P6.1 | **Busca com filtros** | Busca atual é substring simples (`app.js runSearch`); adicionar sintaxe `in:trabalho #urgente depois:2026-01` — filtro por thread/pasta/tag/data. Transforma o app para usuários com muitas notas | Filtros funcionam na busca global e nos resultados |
+| P6.2 | **Backlinks/menções** | Digitar `@` numa nota referencia outra thread (autocomplete de threads); nota citada ganha link clicável e seção "mencionada em". Natural num app "chat consigo mesmo" — nenhum concorrente faz bem | `@` abre autocomplete; backlink bidirecional navegável |
+| P6.3 | **Lembretes/notifications** | Threads como "Renovar CNH" pedem data + `Notification API` / push (Capacitor v2). Hoje o pin é o único destaque | Nota com lembrete dispara notificação na data |
+
+### Arquitetura (dívida que cobra juros)
+
+| # | Task | Detalhe | Aceite |
+|---|------|---------|--------|
+| A6.4 | **Quebrar o `app.js` (~2.6k linhas)** | Store/Sync/UI num arquivo só já dificultou os bugs caçados (o `clientId` ReferenceError foi sintoma). ES Modules nativos: `js/store.js`, `js/sync-supabase.js`, `js/ui/*.js` — **sem build step** | Nenhum arquivo >500 linhas; `npm start` e Vercel sem bundler |
+| A6.5 | **Remover o legado** | `WSSync` + `server/*` são código morto desde a migração Supabase (~400 linhas): `server/www.js`, `server/sync.js`, `server/index.js`, `server/static.js`, branch WS do Sync | Deletar ou extrair para `legacy/`; deploy continua verde |
+| A6.6 | **Testes do fluxo real** | Os 8 testes atuais cobrem Store/config, mas o bug do `clientId` mostrou que falta e2e do caminho crítico: **login → criar thread → marcar checkbox → recarregar → estado persiste** | Playwright roda no CI (`ci.yml`) contra build local |
+
+### Robustez
+
+| # | Task | Detalhe | Aceite |
+|---|------|---------|--------|
+| R6.7 | **Imagens em Storage** | `base64` no Postgres/localStorage vai estourar a cota free (500MB) rápido e incha o snapshot. Supabase Storage (bucket privado + URL assinada) na nota resolve e acelera o carregamento | Upload → Storage; snapshot não carrega bytes de imagem |
+| R6.8 | **Paginação real no servidor** | `limit(200)` no snapshot é paliativo; usar `.range()` com scroll infinito consultando o banco por página (notas antigas sob demanda) | Thread com 5k notas abre igualmente rápida |
+| R6.9 | **PWA update UX** | Auto-reload do SW resolve o bundle travado; um "What's new" no toast de update daria polimento (changelog curto por versão em `sw.js` ou JSON) | Toast mostra 1-2 linhas de novidades antes de recarregar |
+
 ---
 
 ## Ordem recomendada
@@ -111,6 +139,7 @@
 4. **Fase 2** (CI+testes) em paralelo → garante regressão.
 5. **Fase 4** → loja (TWA).
 6. **Fase 5** → v2 externo (OAuth publicado + Capacitor).
+7. **Fase 6** → produto/arquitetura (P6.1–R6.9), em paralelo ou pós-v2.
 
 ## Como validar
 

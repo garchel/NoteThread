@@ -1688,6 +1688,7 @@
 
     bubbleEl(n) {
       const div = document.createElement('div');
+      const clientId = n.clientId; // escopo p/ os handlers abaixo
       const mine = n.userId === (Store.user && Store.user.mail) || n.local;
       const thread = Store.getThread(this.activeThread);
       const isPinned = thread && thread.pinnedId === n.clientId;

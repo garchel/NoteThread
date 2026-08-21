@@ -949,14 +949,14 @@
       if (forgotBtn) forgotBtn.addEventListener('click', async () => {
         const mail = emailInput.value.trim(); if (!mail) { this._showAuthMsg('Digite seu e-mail primeiro', 'error'); return; }
         const supa = await this._ensureSupa(); if (!supa) { this._showAuthMsg('Recuperação indisponível offline', 'error'); return; }
-        const { error } = await supa.auth.resetPasswordForEmail(mail, { redirectTo: location.href });
+        const { error } = await supa.auth.resetPasswordForEmail(mail, { redirectTo: location.origin });
         this._showAuthMsg(error ? error.message : 'Link de recuperação enviado — verifique seu e-mail', error ? 'error' : 'success');
       });
 
       $('#btn-google').addEventListener('click', async () => {
         if (USE_SUPABASE) {
           const supa = await this._ensureSupa();
-          const { error } = await supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href } });
+          const { error } = await supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin } });
           if (error) this._showAuthMsg(error.message, 'error');
           return;
         }
@@ -981,7 +981,7 @@
           if (USE_SUPABASE) {
             const supa = await this._ensureSupa();
             if (mode === 'signup') {
-              const { error } = await supa.auth.signUp({ email: mail, password: pass, options: { emailRedirectTo: location.href } });
+              const { error } = await supa.auth.signUp({ email: mail, password: pass, options: { emailRedirectTo: location.origin } });
               if (error) throw error;
               this._showAuthMsg('Conta criada! Confirme seu e-mail — depois volte e entre com a senha', 'success');
               setMode('login');

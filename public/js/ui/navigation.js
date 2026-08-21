@@ -173,8 +173,14 @@ bindSearch() {
         if (e.key === '?' && !typing) {
           e.preventDefault(); this.showShortcutsHelp(); return;
         }
-        // Esc → fecha popovers/modal abertos
+        // Esc → fecha popovers/modal ou limpa busca com filtros
         if (e.key === 'Escape') {
+          const searchHasValue = this.dom.searchInput && this.dom.searchInput.value.trim();
+          if (searchHasValue && !typing) {
+            this.dom.searchInput.value = '';
+            this.runSearch('', this.dom.searchResults, this.dom.searchClear);
+            return;
+          }
           ['msgPopover', 'pinPopover', 'settingsPopover', 'searchResults'].forEach((k) => {
             if (this.dom[k]) this.dom[k].classList.add('hidden');
           });
@@ -202,10 +208,12 @@ bindSearch() {
         ['antes:2026-12-31', 'Antes de data'],
         ['Ctrl/⌘ + N', 'Nova conversa'],
         ['Ctrl/⌘ + Shift + F', 'Nova pasta'],
+        ['Ctrl/⌘ + L', 'Checklist'],
+        ['@', 'Mencionar thread'],
         ['Ctrl/⌘ + [ / ]', 'Conversa anterior / próxima'],
         ['Enter', 'Enviar nota (no composer)'],
         ['Shift + Enter', 'Quebra de linha (no composer)'],
-        ['Esc', 'Fechar popovers / modal'],
+        ['Esc', 'Fechar popovers / limpar busca'],
         ['?', 'Abrir este painel'],
       ];
       const body = '<div style="display:flex;flex-direction:column;gap:8px">' + rows.map(([k, v]) =>

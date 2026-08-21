@@ -73,20 +73,43 @@ bindComposer() {
       // anexos
       const attach = this.dom.btnAttach, fileInput = this.dom.fileInput, prev = this.dom.attachPreview;
       attach.addEventListener('click', () => fileInput.click());
+      // compressão client-side via canvas (1280px, 0.7) antes do upload
+      const compressImage = (file) => new Promise((resolve) => {
+        if (!file.type.startsWith('image/')) return resolve(file);
+        const img = new Image();
+        img.onload = () => {
+          const max = 1280, q = 0.7;
+          let { width: w, height: h } = img;
+          if (w > max || h > max) {
+            if (w > h) { h = Math.round(h * max / w); w = max; }
+            else { w = Math.round(w * max / h); h = max; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => {
+            URL.revokeObjectURL(img.src);
+            resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file);
+          }, 'image/jpeg', q);
+        };
+        img.onerror = () => resolve(file);
+        img.src = URL.createObjectURL(file);
+      });
       fileInput.addEventListener('change', async () => {
         const f = fileInput.files && fileInput.files[0]; if (!f) return;
         if (f.size > 5 * 1024 * 1024) { alert('Imagem muito grande (máx 5 MB).'); fileInput.value = ''; return; }
         send.disabled = true;
-        // tenta Storage (Supabase) primeiro — evita base64 no Postgres/localStorage
+        const fileToUpload = await compressImage(f);
         if (USE_SUPABASE) {
           try {
             const supa = await getSupa();
             const { data: { session } } = await supa.auth.getSession();
             const uid = session && session.user ? session.user.id : null;
             if (uid) {
-              const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+              const safeName = fileToUpload.name.replace(/[^a-zA-Z0-9._-]/g, '_');
               const path = `${uid}/${Date.now()}-${safeName}`;
-              const { error } = await supa.storage.from('note-images').upload(path, f, { cacheControl: '3600', upsert: false });
+              const { error } = await supa.storage.from('note-images').upload(path, fileToUpload, { cacheControl: '3600', upsert: false });
               if (!error) {
                 const { data } = supa.storage.from('note-images').getPublicUrl(path);
                 this.pendingImages.push(data.publicUrl);
@@ -100,7 +123,7 @@ bindComposer() {
         }
         const reader = new FileReader();
         reader.onload = () => { this.pendingImages.push(reader.result); this.renderAttachPreview(); send.disabled = false; };
-        reader.readAsDataURL(f);
+        reader.readAsDataURL(fileToUpload);
         fileInput.value = '';
       });
       this.attachPreview = prev;

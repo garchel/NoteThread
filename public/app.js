@@ -484,8 +484,12 @@
           this.ensureProfile(session.user);
         }
         this.connected = true; this.setStatus('online'); clearTimeout(t); this._connecting = false;
-        // snapshot só se online (evita 504 offline em loop)
-        if (navigator.onLine !== false) await this.loadSnapshot();
+        // online: 1º reenvia eventos pendentes (checkboxes/edições), DEPOIS snapshot
+        // (assim o snapshot já traz o estado mais novo e não desfaz mudanças locais)
+        if (navigator.onLine !== false) {
+          await this.flushQueue();
+          await this.loadSnapshot();
+        }
         if (this.connected) this.subscribe();
       } catch (e) { clearTimeout(t); this._connecting = false; console.warn('[supabase] connect fail', e); this.setStatus('offline'); }
     },
@@ -529,41 +533,66 @@
         this.channel = ch;
       });
     },
+    // fila de eventos que falharam — persistida em localStorage e reenviada ao conectar
+    _queueKey: 'notethread.syncq',
+    _loadQueue() { try { return JSON.parse(localStorage.getItem(this._queueKey) || '[]'); } catch { return []; } },
+    _saveQueue(q) { try { localStorage.setItem(this._queueKey, JSON.stringify(q.slice(-200))); } catch {} },
+    _enqueue(type, payload) {
+      const q = this._loadQueue();
+      q.push({ type, payload, ts: Date.now() });
+      this._saveQueue(q);
+    },
+    async flushQueue() {
+      const q = this._loadQueue();
+      if (!q.length || !this.supa) return;
+      const rest = [];
+      for (const item of q) {
+        try {
+          this.lastSync = Date.now();
+          await this._doSend(item.type, item.payload); // lança se falhar
+        } catch (e) { rest.push(item); }
+      }
+      this._saveQueue(rest);
+      if (q.length && !rest.length && UI && UI.toast) UI.toast('Sincronização restaurada', { kind: 'success' });
+    },
     async send(type, payload) {
       if (!this.supa) return;
       this.lastSync = Date.now();
       try {
-        const uid = await this._uid(); if (!uid) { console.warn('[supabase] send sem sessão:', type); return; }
-        if (type === 'note:upsert') {
-          const n = payload; await this.supa.from('notes').upsert({ client_id: n.clientId, thread_id: n.threadId, text: n.text, images: n.images || [], tags: n.tags || [], ts: n.ts, sort_order: n.sortOrder || 0, edited: !!n.edited, edited_at: n.editedAt || null, rev: n.rev || 0, user_id: uid }, { onConflict: 'client_id' });
-        } else if (type === 'thread:upsert') {
-          const t = payload; await this.supa.from('threads').upsert({ id: t.id, name: t.name, emoji: t.emoji, folder_id: t.folderId || null, favorite: !!t.favorite, pinned_id: t.pinnedId || null, updated_at: new Date().toISOString(), last_preview: t.lastPreview || '', user_id: uid }, { onConflict: 'id' });
-        } else if (type === 'thread:delete') {
-          await this.supa.from('threads').delete().eq('id', payload.id);
-        } else if (type === 'folder:upsert') {
-          const f = payload; await this.supa.from('folders').upsert({ id: f.id, name: f.name, emoji: f.emoji, parent_id: f.parentId || null, user_id: uid }, { onConflict: 'id' });
-        } else if (type === 'folder:delete') {
-          await this.supa.from('folders').delete().eq('id', payload.id);
-        } else if (type === 'note:delete') {
-          await this.supa.from('notes').delete().eq('client_id', payload.clientId);
-        } else if (type === 'note:edit') {
-          await this.supa.from('notes').update({ text: payload.text, edited: true, edited_at: payload.editedAt, rev: payload.rev }).eq('client_id', payload.clientId);
-        } else if (type === 'note:tags') {
-          await this.supa.from('notes').update({ tags: payload.tags }).eq('client_id', payload.clientId);
-        } else if (type === 'note:pin') {
-          // usa estado explícito do payload (não recomputa — Store local já foi flipado)
-          const cur = payload.pinned ? payload.clientId : null;
-          await this.supa.from('threads').update({ pinned_id: cur }).eq('id', payload.threadId);
-        } else if (type === 'thread:move') {
-          await this.supa.from('threads').update({ folder_id: payload.folderId || null }).eq('id', payload.threadId);
-        }
+        await this._doSend(type, payload);
       } catch (e) {
         console.warn('[supabase] send fail', type, e);
-        // avisa o usuário 1× por sessão que algo não persistiu
+        this._enqueue(type, payload); // tenta de novo ao reconectar
         if (!this._warnedFail && UI && UI.toast) {
           this._warnedFail = true;
-          UI.toast('Falha ao sincronizar — suas notas ficam salvas localmente', { kind: 'error' });
+          UI.toast('Falha ao sincronizar — será reenviado automaticamente', { kind: 'error' });
         }
+      }
+    },
+    async _doSend(type, payload) {
+      const uid = await this._uid(); if (!uid) throw new Error('sem sessão');
+      if (type === 'note:upsert') {
+        const n = payload; await this.supa.from('notes').upsert({ client_id: n.clientId, thread_id: n.threadId, text: n.text, images: n.images || [], tags: n.tags || [], ts: n.ts, sort_order: n.sortOrder || 0, edited: !!n.edited, edited_at: n.editedAt || null, rev: n.rev || 0, user_id: uid }, { onConflict: 'client_id' });
+      } else if (type === 'thread:upsert') {
+        const t = payload; await this.supa.from('threads').upsert({ id: t.id, name: t.name, emoji: t.emoji, folder_id: t.folderId || null, favorite: !!t.favorite, pinned_id: t.pinnedId || null, updated_at: new Date().toISOString(), last_preview: t.lastPreview || '', user_id: uid }, { onConflict: 'id' });
+      } else if (type === 'thread:delete') {
+        await this.supa.from('threads').delete().eq('id', payload.id);
+      } else if (type === 'folder:upsert') {
+        const f = payload; await this.supa.from('folders').upsert({ id: f.id, name: f.name, emoji: f.emoji, parent_id: f.parentId || null, user_id: uid }, { onConflict: 'id' });
+      } else if (type === 'folder:delete') {
+        await this.supa.from('folders').delete().eq('id', payload.id);
+      } else if (type === 'note:delete') {
+        await this.supa.from('notes').delete().eq('client_id', payload.clientId);
+      } else if (type === 'note:edit') {
+        await this.supa.from('notes').update({ text: payload.text, edited: payload.edited !== undefined ? !!payload.edited : true, edited_at: payload.editedAt, rev: payload.rev }).eq('client_id', payload.clientId);
+      } else if (type === 'note:tags') {
+        await this.supa.from('notes').update({ tags: payload.tags }).eq('client_id', payload.clientId);
+      } else if (type === 'note:pin') {
+        // usa estado explícito do payload (não recomputa — Store local já foi flipado)
+        const cur = payload.pinned ? payload.clientId : null;
+        await this.supa.from('threads').update({ pinned_id: cur }).eq('id', payload.threadId);
+      } else if (type === 'thread:move') {
+        await this.supa.from('threads').update({ folder_id: payload.folderId || null }).eq('id', payload.threadId);
       }
     }
   };

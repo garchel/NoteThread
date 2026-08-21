@@ -527,10 +527,10 @@ openThread(id) {
 
     setupInfiniteScroll() {
       const box = $('#messages');
-      box.addEventListener('scroll', () => {
-        if (box.scrollTop < 60 && !this.loading && this.activeThread) {
-          const { hasMore } = Store.pageNotes(this.activeThread, this.oldestTs, PAGE_SIZE);
-          if (!hasMore) return;
+      box.addEventListener('scroll', async () => {
+        if (box.scrollTop >= 60 || this.loading || !this.activeThread) return;
+        const local = Store.pageNotes(this.activeThread, this.oldestTs, PAGE_SIZE);
+        if (local.hasMore) {
           this.loading = true;
           const prevHeight = box.scrollHeight, prevTop = box.scrollTop;
           const { items } = Store.pageNotes(this.activeThread, this.oldestTs, PAGE_SIZE);
@@ -541,7 +541,29 @@ openThread(id) {
           box.insertBefore(frag, loader.nextSibling);
           box.scrollTop = box.scrollHeight - prevHeight + prevTop;
           this.loading = false;
+          return;
         }
+        // local esgotado → tenta buscar no servidor (Supabase .range)
+        if (!Sync.fetchNotesPage) return;
+        this.loading = true;
+        try {
+          const serverItems = await Sync.fetchNotesPage(this.activeThread, this.oldestTs, PAGE_SIZE);
+          if (!serverItems.length) return;
+          serverItems.forEach(n => Store.upsertNote(n));
+          // pega do Store o que acabou de inserir (garante sortOrder)
+          const { items } = Store.pageNotes(this.activeThread, this.oldestTs, PAGE_SIZE);
+          // fallback: se pageNotes não retornou os recém-inseridos (ex: beforeTs null), usa serverItems
+          const toRender = items.length ? items : serverItems;
+          if (!toRender.length) return;
+          const prevHeight = box.scrollHeight, prevTop = box.scrollTop;
+          this.oldestTs = toRender[0].ts;
+          const frag = document.createDocumentFragment();
+          const loader = $('#load-older');
+          toRender.forEach((n) => { if (this.renderedClientIds.has(n.clientId)) return; this.renderedClientIds.add(n.clientId); frag.appendChild(this.bubbleEl(n)); });
+          box.insertBefore(frag, loader.nextSibling);
+          box.scrollTop = box.scrollHeight - prevHeight + prevTop;
+        } catch (e) { console.warn('fetch page fail', e); }
+        finally { this.loading = false; }
       });
     },
 };

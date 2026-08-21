@@ -178,6 +178,14 @@ import { Store } from './store.js';
         }
       }
     },
+    async fetchNotesPage(threadId, beforeTs, count) {
+      if (!this.supa) return [];
+      let q = this.supa.from('notes').select('*').eq('thread_id', threadId).order('ts', { ascending: false }).limit(count || 25);
+      if (beforeTs != null) q = q.lt('ts', beforeTs);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []).reverse().map(n => ({ clientId: n.client_id, threadId: n.thread_id, text: n.text, images: n.images||[], tags: n.tags||[], ts: Number(n.ts), sortOrder: n.sort_order, edited: n.edited, editedAt: n.edited_at, rev: n.rev, remindAt: n.remind_at ? Number(n.remind_at) : null, remindFired: !!n.remind_fired, userId: Store.user ? Store.user.mail : 'anon' }));
+    },
     async _doSend(type, payload) {
       const uid = await this._uid(); if (!uid) throw new Error('sem sessão');
       if (type === 'note:upsert') {

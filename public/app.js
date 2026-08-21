@@ -174,10 +174,13 @@ showModal(title, bodyHtml, onOk) {
             if (!nw) return;
             nw.addEventListener('statechange', () => {
               if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                UI.toast('Nova versão disponível', {
-                  kind: 'info',
-                  duration: 8000,
-                  action: { label: 'Recarregar', fn: () => location.reload() }
+                // busca changelog curto para mostrar no toast
+                fetch('CHANGELOG.md').then(r => r.text()).then(t => {
+                  const m = t.match(/## \[.*?\][^\n]*\n([\s\S]*?)(?=\n## |\n$)/);
+                  const whats = m ? m[1].split('\n').filter(l=>l.trim().startsWith('-')).slice(0,2).map(l=>l.replace(/^-\s*/,'')).join(' · ') : 'Melhorias de performance e correções';
+                  UI.toast(`Nova versão — ${whats}`, { kind: 'info', duration: 9000, action: { label: 'Recarregar', fn: () => location.reload() } });
+                }).catch(() => {
+                  UI.toast('Nova versão disponível', { kind: 'info', duration: 8000, action: { label: 'Recarregar', fn: () => location.reload() } });
                 });
               }
             });

@@ -2,18 +2,29 @@
 
 Todas as mudanças notáveis serão documentadas aqui (semver).
 
+## [1.2.0] — 2026-08-21
+### Adicionado
+- Busca com filtros `in:`, `#tag`, `depois:`, `antes:` + chips
+- Backlink reverso "Mencionado em" para menções `@`
+- Paginação real `.range()` no Supabase (thread com 5k notas abre rápido)
+- "What's new" no toast de update (mostra 2 itens do changelog)
+- Imagens no Supabase Storage (bucket `note-images`, 5MB, fallback base64)
+- Checklists clicáveis com persistência + ocultar concluídas (fade)
+
+### Corrigido
+- Singleton Supabase (Multiple GoTrueClient), status laranja preso, modal exclusão nota
+
+## [1.1.0] — 2026-08-21
+### Adicionado
+- Menções `@` com autocomplete + lembretes com Notification API + badge ⏰
+- Persistência de login (lembrar-me), modal exclusão nota, área arrow, checkboxes
+- Pull-to-refresh com indicador visual
+
 ## [1.0.0] — 2026-08-21
 ### Adicionado
 - Checklist único `docs/ROADMAP_ESTAVEL.md` (Fases 0–4)
 - Reorganização `README.md` + `docs/PROGRESSO.md` + `docs/MOBILE_TASKS.md`
-- Fix mobile: popovers responsivos (`pin-popover`/`settings-popover` `calc(100vw-16px)`), touch `44px` em `.fmt-btn`, emoji grid 4 colunas mobile, `safe-area-inset`, placeholder ellipsis
-- PWA: `meta theme-color` dinâmico por tema + `viewport-fit=cover`
-- Server: headers `CSP`/`X-Frame-Options`/`Cache-Control`, rate-limit WS 30msg/s, limite payload 1.5MB, sanitização texto 5000 chars
-- Lightbox pinch-to-zoom + double-tap
-- CI `/.github/workflows/ci.yml` (health + headers), `.env.example`, `privacy.html`/`terms.html`
-
-### Corrigido
-- `applyTheme` duplicado removido
-
-## [0.8.x] — histórico v2–v8.3
-Ver `README.md` anterior / `docs/PROGRESSO.md` — threads, markdown, drag-and-drop, sons `cuelume`.
+- Fix mobile: popovers responsivos, touch 44px, emoji grid 4 colunas, safe-area
+- PWA: `meta theme-color` dinâmico, `viewport-fit=cover`
+- Server: headers `CSP`/`Cache-Control`, rate-limit, sanitização
+- Lightbox pinch-to-zoom + CI, `.env.example`, `privacy.html`/`terms.html`

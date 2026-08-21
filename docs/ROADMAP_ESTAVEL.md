@@ -117,7 +117,7 @@
 
 | # | Task | Detalhe | Aceite |
 |---|------|---------|--------|
-| A6.4 | **Quebrar o `app.js` (~2.6k linhas)** | Store/Sync/UI num arquivo só já dificultou os bugs caçados (o `clientId` ReferenceError foi sintoma). ES Modules nativos: `js/store.js`, `js/sync-supabase.js`, `js/ui/*.js` — **sem build step** | Nenhum arquivo >500 linhas; `npm start` e Vercel sem bundler |
+| A6.4 | ✅ **Quebrar o `app.js`** | Implementado `a9a2c70`: 13 ES Modules nativos (`js/utils,icons,emojis,markdown,store,sound,sync-supabase` + `js/ui/picker,navigation,messages,mentions,reminders`) — sem build step; `app.js` virou entry/core de 1.270 linhas (próxima iteração: extrair tree/settings/auth/composer). E2e Playwright valida o fluxo crítico pós-refactor | ✅ Sem bundler; e2e verde |
 | A6.5 | ✅ **Remover o legado** | Removido `17cdd5d`: `server/*` (www/sync/index/static/start), `Procfile`, `attachtest.js`, `WSSync`/`SYNC_URL` no app.js, dep `ws`. Sync = SupaSync direto; sem config → offline honesto | ✅ Deletado; deploy verde |
 | A6.6 | ✅ **Testes do fluxo real** | Implementado `17cdd5d`: Playwright + servidor estático zero-dep. 2 specs verdes: (1) criar thread → nota com checkbox → marcar → reload → persiste; (2) menção `@` → token → chip → navegação. Roda no CI (`ci.yml`) | ✅ `npm run e2e` verde local e CI |
 

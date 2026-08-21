@@ -28,11 +28,21 @@ Bloco de notas em **threads infinitas estilo chat** — como conversar com você
 
 ## Como rodar
 
+App 100% estático + Supabase (sem backend próprio):
+
 ```bash
 npm install
-npm start          # frontend + sync na mesma porta (default 3000)
+npx serve public        # ou qualquer servidor estático / VSCode Live Server
 # abra http://localhost:3000
-PORT=8080 npm start
+```
+
+Configure `window.SUPABASE_URL`/`SUPABASE_ANON_KEY` em `public/index.html` e rode `supabase.sql` no SQL Editor.
+
+Testes:
+```bash
+npm run check   # sintaxe
+npm test        # unit (node:test)
+npm run e2e     # Playwright — fluxo crítico
 ```
 
 Teste multi-device: abra em 2 abas/janelas com o **mesmo e-mail** → nota em A aparece em B em realtime. Offline: desligue Wi-Fi, continue escrevendo, reconecte → reconcilia.
@@ -58,12 +68,11 @@ em `public/index.html:221`. `Procfile:1` já aponta para `node server/www.js` (R
 
 ```
 public/  index.html  app.js  styles.css  sw.js  manifest.webmanifest  icon-*.png
-server/  www.js (prod)  sync.js (núcleo)  start.js  data.json (ignorado)
+supabase.sql  schema + RLS + Realtime (rodar no SQL Editor)
+tests/    unit (node:test) + e2e (Playwright)
 ```
 
-Fluxo: `composer → Store.upsertNote() → localStorage → Sync.send('note:upsert') → broadcast → snapshot no hello`.
-
-> Para produção, `server/sync.js` é trocável por Firebase/Supabase mantendo a mesma API `Sync.on/send` (`README` original `L98`).
+Fluxo: `composer → Store.upsertNote() → localStorage → Supabase (upsert/Realtime) → outros dispositivos`.
 
 ## Limitações atuais (sandbox)
 

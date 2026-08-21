@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacidade — NoteThread</title><link rel="stylesheet" href="styles.css"></head><body style="max-width:720px;margin:40px auto;padding:20px;font-family:system-ui">
 <h1>Política de Privacidade — NoteThread</h1>
 <p>Última atualização: 21/08/2026</p>
-<p>NoteThread armazena suas notas localmente (<code>localStorage</code>) e, quando conectado, sincroniza via WebSocket com o servidor configurado em <code>window.NOTE_THREAD_SYNC_URL</code>. Dados são isolados por conta (<code>userId = e-mail</code>).</p>
+<p>NoteThread armazena suas notas localmente (<code>localStorage</code>) e, quando conectado, sincroniza via Supabase (Postgres + Realtime). Dados são isolados por conta (<code>auth.uid()</code> via RLS).</p>
 <ul>
 <li><strong>Dados coletados:</strong> e-mail (login), conteúdo de notas/threads/pastas.</li>
 <li><strong>Retenção:</strong> local + servidor (atualmente <code>data.json</code>, futuro Postgres). Exclusão via “Apagar tudo” nas configurações.</li>

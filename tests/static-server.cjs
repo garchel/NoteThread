@@ -1,14 +1,17 @@
-// Servidor estático para o frontend do NoteThread.
-// O sync server (WebSocket :3001) é gerenciado separadamente pelo supervisord.
+// Servidor estático mínimo (sem dependências) para os testes e2e.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const MIME = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+  '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon',
+};
 
 const server = http.createServer((req, res) => {
-  let url = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  const url = req.url === '/' ? '/index.html' : req.url.split('?')[0];
   const file = path.join(PUBLIC, url);
   if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, data) => {
@@ -18,5 +21,5 @@ const server = http.createServer((req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`NoteThread app em http://localhost:${PORT}`));
+const PORT = process.env.PORT || 4173;
+server.listen(PORT, () => console.log(`static server em :${PORT}`));

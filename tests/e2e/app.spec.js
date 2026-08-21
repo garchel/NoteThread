@@ -1,0 +1,88 @@
+// A6.6 — fluxo crítico: login (seed) → criar thread → enviar nota com checkbox
+// → marcar → recarregar → estado persiste (offline-first via localStorage).
+const { test, expect } = require('@playwright/test');
+
+const seed = {
+  user: { name: 'Tester', mail: 'tester@example.com', provider: 'email' },
+  threads: {}, folders: {}, notes: {},
+  ui: { expanded: {}, sounds: { enabled: false, volume: 0.5, map: {} } },
+};
+
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript((s) => {
+    // semeia apenas na 1ª carga; preserva o estado criado pelo teste após reload
+    if (!localStorage.getItem('notethread.v2')) {
+      localStorage.setItem('notethread.v2', JSON.stringify(s));
+    }
+  }, seed);
+});
+
+test('fluxo crítico: criar thread → nota com checkbox → marcar → persiste após reload', async ({ page }) => {
+  await page.goto('/');
+
+  // logado via seed → app visível
+  await expect(page.locator('#app')).toBeVisible();
+
+  // cria uma thread
+  await page.click('#btn-new-thread');
+  await expect(page.locator('#modal')).toBeVisible();
+  await page.fill('#nt-name', 'E2E Thread');
+  // escolhe um emoji do picker (primeiro disponível)
+  await page.click('.emoji-opt');
+  await page.click('#modal-ok');
+  await expect(page.locator('#chat-name')).toHaveText('E2E Thread');
+
+  // envia nota com checklist
+  const composer = page.locator('#composer-input');
+  await expect(composer).toBeEnabled();
+  await composer.fill('[ ] comprar leite');
+  await composer.press('Enter');
+  const bubble = page.locator('.bubble').last();
+  await expect(bubble).toContainText('comprar leite');
+
+  // marca a checkbox
+  const chk = bubble.locator('.md-check input[type="checkbox"]');
+  await expect(chk).toBeVisible();
+  await chk.click();
+  await expect(chk).toBeChecked();
+
+  // recarrega: estado persiste via localStorage
+  await page.reload();
+  await expect(page.locator('#app')).toBeVisible();
+  await page.locator('.tnode', { hasText: 'E2E Thread' }).first().click();
+  const chk2 = page.locator('.bubble .md-check input[type="checkbox"]').first();
+  await expect(chk2).toBeChecked();
+  await expect(page.locator('.bubble').last()).toContainText('comprar leite');
+});
+
+test('menção @ insere token e renderiza chip clicável', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#app')).toBeVisible();
+
+  // cria thread alvo da menção
+  await page.click('#btn-new-thread');
+  await page.fill('#nt-name', 'Alvo');
+  await page.click('#modal-ok');
+  await expect(page.locator('#chat-name')).toHaveText('Alvo');
+
+  // cria thread principal e menciona a Alvo
+  await page.click('#btn-new-thread');
+  await page.fill('#nt-name', 'Principal');
+  await page.click('#modal-ok');
+  await expect(page.locator('#chat-name')).toHaveText('Principal');
+
+  const composer = page.locator('#composer-input');
+  await composer.fill('veja @');
+  // dropdown de menções aparece
+  const dd = page.locator('#mention-dd');
+  await expect(dd).toBeVisible();
+  await dd.locator('.mention-opt', { hasText: 'Alvo' }).click();
+  await expect(composer).toHaveValue(/@\[Alvo\]\(t:/);
+  await composer.press('Enter');
+
+  // chip renderizado na bolha
+  const chip = page.locator('.bubble .mention', { hasText: 'Alvo' }).last();
+  await expect(chip).toBeVisible();
+  await chip.click();
+  await expect(page.locator('#chat-name')).toHaveText('Alvo');
+});

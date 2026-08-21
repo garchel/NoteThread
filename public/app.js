@@ -12,21 +12,10 @@
   'use strict';
 
   const PAGE_SIZE = 25;
-  console.info('[NoteThread] app.js bundle v27 — checklist hideDone ativo');
+  console.info('[NoteThread] app.js bundle v31 — supabase-only');
 
   // ---------------------------------------------------------------------
-  // CONFIGURAÇÃO DE SINCRONIZAÇÃO
-  // `SYNC_URL` define onde o websocket de sync deve se conectar.
-  //  - Vazio (default): usa o host que serviu a página + porta 3001.
-  //    (funciona quando rodando em localhost / na LAN via npm start)
-  //  - No APK (Capacitor) ou em produção, defina explicitamente a URL,
-  //    ex.: 'wss://notethread.meu-servidor.com' (sem barra no final).
-  // Prioridade: window.NOTE_THREAD_SYNC_URL > constantes abaixo > auto.
-  const SYNC_URL =
-    (typeof window !== 'undefined' && window.NOTE_THREAD_SYNC_URL) ||
-    // mesma origem: usa o mesmo host/porta que serviu a página (funciona em
-    // localhost, na LAN e em produção com um único servidor + HTTPS)
-    ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+  // CONFIGURAÇÃO DE SINCRONIZAÇÃO (Supabase — definido em index.html)
   const SUPABASE_URL = (typeof window !== 'undefined' && window.SUPABASE_URL) || '';
   const SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) || '';
   const USE_SUPABASE = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
@@ -380,43 +369,19 @@
   };
 
   // ===================================================================
-  // SYNC (real-time, WebSocket ↔ Supabase) — usa Supabase se configurado, senão WS
+  // SYNC (Supabase: Postgres + Realtime + RLS — sem backend próprio)
   // ===================================================================
-  const WSSync = {
-    ws: null, connected: false, handlers: {}, reconnectTimer: null, lastSync: 0,
-    url: SYNC_URL,
+  const SupaSync = {
+    supa: null, channel: null, handlers: {}, lastSync: 0, connected: false,
     on(type, fn) { this.handlers[type] = fn; },
     emit(type, payload) { this.lastSync = Date.now(); if (this.handlers[type]) this.handlers[type](payload); },
-    connect() {
-      this.setStatus('connecting');
-      try { this.ws = new WebSocket(this.url); } catch (e) { this.scheduleReconnect(); return; }
-      this.ws.onopen = () => {
-        this.connected = true; this.setStatus('online');
-        this.send('hello', { userId: Store.user ? Store.user.mail : Store.getUserId() });
-        this.flushPending();
-      };
-      this.flushPending = () => {
-        const all = Store.data.notes || {};
-        Object.entries(all).forEach(([tid, arr]) => arr.forEach((n) => {
-          if (n.pending) this.send('note:upsert', Object.assign({}, n, { pending: false }));
-        }));
-      };
-      this.ws.onmessage = (ev) => {
-        let msg; try { msg = JSON.parse(ev.data); } catch { return; }
-        if (msg.type === 'snapshot') this.emit('snapshot', msg.payload);
-        else this.emit(msg.type, msg.payload);
-      };
-      this.ws.onclose = () => { this.connected = false; this.setStatus('offline'); this.scheduleReconnect(); };
-      this.ws.onerror = () => { try { Sound.play('error'); haptic('error'); } catch {} try { this.ws.close(); } catch {} };
-    },
-    scheduleReconnect() { if (this.reconnectTimer) return; this.reconnectTimer = setTimeout(() => { this.reconnectTimer = null; this.connect(); }, 2500); },
-    send(type, payload) { if (this.ws && this.connected && this.ws.readyState === 1) { this.lastSync = Date.now(); this.ws.send(JSON.stringify({ type, payload })); } },
+    _connecting: false,
+    _uidCache: null,
     _lastStatus: null, _lastStatusAt: 0,
     setStatus(s) {
       if (s === this._lastStatus) return;
       const now = Date.now();
       // debounce só para 'connecting' (evita frenesi); online/offline sempre aplicam
-      // (antes: 'online' era engolido se chegasse <400ms após 'connecting' → dot preso no laranja)
       if (s === 'connecting' && this._lastStatus && now - this._lastStatusAt < 400) return;
       this._lastStatus = s; this._lastStatusAt = now;
       const el = $('#sync-status'); if (!el) return;
@@ -438,16 +403,6 @@
       el.appendChild(svg);
       if (UI && UI.updateSyncLabel) UI.updateSyncLabel();
     },
-  };
-
-  // Supabase Sync (free tier, sem Node) — usa Postgres + Realtime + RLS
-  const SupaSync = {
-    supa: null, channel: null, handlers: {}, lastSync: 0, connected: false,
-    on(type, fn) { this.handlers[type] = fn; },
-    emit(type, payload) { this.lastSync = Date.now(); if (this.handlers[type]) this.handlers[type](payload); },
-    _connecting: false,
-    _uidCache: null,
-    setStatus(s) { return WSSync.setStatus.call(this, s); },
     // uid da sessão LOCAL (sem rede) — getUser() fazia request por evento e falhava silencioso
     async _uid() {
       if (!this.supa) return null;
@@ -469,7 +424,7 @@
       if (typeof navigator !== 'undefined' && navigator.onLine === false) { this.setStatus('offline'); return; }
       this._connecting = true;
       this.setStatus('connecting');
-      if (!USE_SUPABASE) { this._connecting = false; return WSSync.connect.call(this); }
+      if (!USE_SUPABASE) { this._connecting = false; this.setStatus('offline'); return; }
       const t = setTimeout(() => { if (!this.connected) { this.setStatus('offline'); console.warn('[supabase] connect timeout'); } this._connecting = false; }, 8000);
       try {
         this.supa = await getSupa();
@@ -605,7 +560,7 @@
     }
   };
 
-  const Sync = USE_SUPABASE ? SupaSync : WSSync;
+  const Sync = SupaSync;
 
   // ===================================================================
   // UI / CONTROLLER

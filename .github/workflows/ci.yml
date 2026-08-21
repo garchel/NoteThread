@@ -15,22 +15,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci || npm install
+      - run: npm install
       - name: Lint (syntax check)
         run: npm run check
-      - name: Tests
+      - name: Unit tests
         run: npm test
-      - name: Start server + health check
-        run: |
-          PORT=3001 node server/www.js &
-          sleep 2
-          curl -f http://localhost:3001/health
-          curl -f http://localhost:3001/ | head -n 5
-          kill %1 || true
-      - name: Headers check
-        run: |
-          PORT=3002 node server/www.js &
-          sleep 2
-          curl -s -D - http://localhost:3002/health -o /dev/null | grep -i "X-Content-Type-Options"
-          curl -s -D - http://localhost:3002/ -o /dev/null | grep -i "Content-Security-Policy"
-          kill %1 || true
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: E2E (fluxo crítico)
+        run: npm run e2e

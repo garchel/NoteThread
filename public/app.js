@@ -370,11 +370,12 @@
     _connecting: false,
     setStatus(s) { return WSSync.setStatus.call(this, s); },
     async connect() {
-      if (this._connecting) return;
+      if (this._connecting || (this.connected && this.supa)) return;
+      // offline: não tenta conectar repetidamente
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) { this.setStatus('offline'); return; }
       this._connecting = true;
       this.setStatus('connecting');
       if (!USE_SUPABASE) { this._connecting = false; return WSSync.connect.call(this); }
-      if (this.connected && this.supa) { this._connecting = false; return; }
       const t = setTimeout(() => { if (!this.connected) { this.setStatus('offline'); console.warn('[supabase] connect timeout'); } this._connecting = false; }, 8000);
       try {
         this.supa = await getSupa();
@@ -389,8 +390,9 @@
           Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
         }
         this.connected = true; this.setStatus('online'); clearTimeout(t); this._connecting = false;
-        await this.loadSnapshot();
-        this.subscribe();
+        // snapshot só se online (evita 504 offline em loop)
+        if (navigator.onLine !== false) await this.loadSnapshot();
+        if (this.connected) this.subscribe();
         setTimeout(async () => {
           if (this.channel && this.channel.state !== 'joined' && this.channel.state !== 'subscribed') {
             console.warn('[supabase] channel not joined', this.channel.state);
@@ -1038,16 +1040,23 @@
         this._clearAuthMsg(); setMode('login');
       });
 
-      // se já há sessão Supabase, sincroniza
+      // se já há sessão Supabase, sincroniza — apenas 1 listener global
       if (USE_SUPABASE) {
         this._ensureSupa().then(supa => {
-          if (!supa) return;
+          if (!supa || supa._bound) return;
+          supa._bound = true; // marca para não duplicar onAuthStateChange
           supa.auth.getSession().then(({ data: { session } }) => {
-            if (session && session.user) { Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id }); this.renderAuthOrApp(); }
+            if (session && session.user) {
+              const wasLogged = !!Store.user;
+              Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
+              if (!wasLogged) this.renderAuthOrApp();
+            }
           });
           supa.auth.onAuthStateChange((_ev, sess) => {
-            if (sess && sess.user) { Store.setUser({ name: sess.user.email.split('@')[0], mail: sess.user.email, provider: 'supabase', id: sess.user.id }); this.renderAuthOrApp(); }
-            else if (!sess) { /* mantém offline */ }
+            if (sess && sess.user && (!Store.user || Store.user.mail !== sess.user.email)) {
+              Store.setUser({ name: sess.user.email.split('@')[0], mail: sess.user.email, provider: 'supabase', id: sess.user.id });
+              this.renderAuthOrApp();
+            }
           });
         });
       }
@@ -1059,8 +1068,8 @@
         $('#app').classList.remove('hidden');
         this.renderMe();
         this.renderTree();
-        Sync.connect();
-        // garante que o chat UI comece oculto até o usuário selecionar uma thread
+        // conecta apenas 1× — evita channel duplicado a cada onAuthStateChange
+        if (!Sync.connected && !Sync._connecting) Sync.connect();
         this.setChatActiveUi(false);
       } else {
         $('#auth-screen').classList.remove('hidden');

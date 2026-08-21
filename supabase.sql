@@ -85,3 +85,17 @@ exception when duplicate_object then null; end $$;
 -- 4. Índices
 create index if not exists notes_thread_ts on notes(thread_id, ts);
 create index if not exists threads_user_updated on threads(user_id, updated_at desc);
+
+-- 5. Storage para imagens (substitui base64 — R6.7)
+insert into storage.buckets (id, name, public) values ('note-images', 'note-images', true) on conflict (id) do nothing;
+
+do $$ begin
+  create policy "own images" on storage.objects for all
+    using (bucket_id = 'note-images' and auth.uid() = owner)
+    with check (bucket_id = 'note-images' and auth.uid() = owner);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public read images" on storage.objects for select
+    using (bucket_id = 'note-images');
+exception when duplicate_object then null; end $$;

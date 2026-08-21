@@ -1,6 +1,6 @@
 import { uid, now, fmtTime, haptic, $ } from '../utils.js';
 import { Store } from '../store.js';
-import { Sync } from '../sync-supabase.js';
+import { Sync, getSupa, USE_SUPABASE } from '../sync-supabase.js';
 import { Sound } from '../sound.js';
 
 export const ComposerMethods = {
@@ -73,15 +73,33 @@ bindComposer() {
       // anexos
       const attach = this.dom.btnAttach, fileInput = this.dom.fileInput, prev = this.dom.attachPreview;
       attach.addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', () => {
+      fileInput.addEventListener('change', async () => {
         const f = fileInput.files && fileInput.files[0]; if (!f) return;
-        if (f.size > 1.5 * 1024 * 1024) { alert('Imagem muito grande (máx 1.5 MB).'); fileInput.value = ''; return; }
+        if (f.size > 5 * 1024 * 1024) { alert('Imagem muito grande (máx 5 MB).'); fileInput.value = ''; return; }
+        send.disabled = true;
+        // tenta Storage (Supabase) primeiro — evita base64 no Postgres/localStorage
+        if (USE_SUPABASE) {
+          try {
+            const supa = await getSupa();
+            const { data: { session } } = await supa.auth.getSession();
+            const uid = session && session.user ? session.user.id : null;
+            if (uid) {
+              const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+              const path = `${uid}/${Date.now()}-${safeName}`;
+              const { error } = await supa.storage.from('note-images').upload(path, f, { cacheControl: '3600', upsert: false });
+              if (!error) {
+                const { data } = supa.storage.from('note-images').getPublicUrl(path);
+                this.pendingImages.push(data.publicUrl);
+                this.renderAttachPreview();
+                send.disabled = false;
+                fileInput.value = '';
+                return;
+              }
+            }
+          } catch (e) { console.warn('[storage] upload fail, fallback base64', e); }
+        }
         const reader = new FileReader();
-        reader.onload = () => {
-          this.pendingImages.push(reader.result);
-          this.renderAttachPreview();
-          send.disabled = false;
-        };
+        reader.onload = () => { this.pendingImages.push(reader.result); this.renderAttachPreview(); send.disabled = false; };
         reader.readAsDataURL(f);
         fileInput.value = '';
       });

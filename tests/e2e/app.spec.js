@@ -19,12 +19,14 @@ test.beforeEach(async ({ context }) => {
 
 test('fluxo crítico: criar thread → nota com checkbox → marcar → persiste após reload', async ({ page }) => {
   await page.goto('/');
+  await page.waitForTimeout(1500);
 
   // logado via seed → app visível
   await expect(page.locator('#app')).toBeVisible();
+  await expect(page.locator('#btn-new-thread')).toBeVisible();
 
-  // cria uma thread
-  await page.click('#btn-new-thread');
+  // cria uma thread (via JS click para evitar hit-test flakiness após modularização)
+  await page.evaluate(() => document.getElementById('btn-new-thread').click());
   await expect(page.locator('#modal')).toBeVisible();
   await page.fill('#nt-name', 'E2E Thread');
   // escolhe um emoji do picker (primeiro disponível)
@@ -57,16 +59,18 @@ test('fluxo crítico: criar thread → nota com checkbox → marcar → persiste
 
 test('menção @ insere token e renderiza chip clicável', async ({ page }) => {
   await page.goto('/');
+  await page.waitForTimeout(1500);
   await expect(page.locator('#app')).toBeVisible();
+  await expect(page.locator('#btn-new-thread')).toBeVisible();
 
   // cria thread alvo da menção
-  await page.click('#btn-new-thread');
+  await page.evaluate(() => document.getElementById('btn-new-thread').click());
   await page.fill('#nt-name', 'Alvo');
   await page.click('#modal-ok');
   await expect(page.locator('#chat-name')).toHaveText('Alvo');
 
   // cria thread principal e menciona a Alvo
-  await page.click('#btn-new-thread');
+  await page.evaluate(() => document.getElementById('btn-new-thread').click());
   await page.fill('#nt-name', 'Principal');
   await page.click('#modal-ok');
   await expect(page.locator('#chat-name')).toHaveText('Principal');

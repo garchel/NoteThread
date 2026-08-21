@@ -157,14 +157,14 @@
     // 6) listas: linhas começando com - ou *
     // 7) checklist: linhas começando com [ ] ou [x]
     const lines = s.split('\n');
-    let html = '', inList = false, inChk = false;
+    let html = '', inList = false, inChk = false, chkIndex = 0;
     for (const line of lines) {
       const chk = line.match(/^\s*\[( |x)\]\s*(.*)$/i);
       if (chk) {
         if (inList) { html += '</ul>'; inList = false; }
         if (!inChk) { html += '<div class="md-checklist">'; inChk = true; }
         const done = chk[1].toLowerCase() === 'x';
-        html += `<label class="md-check${done ? ' done' : ''}"><input type="checkbox" ${done ? 'checked' : ''} disabled/><span>${chk[2]}</span></label>`;
+        html += `<label class="md-check${done ? ' done' : ''}"><input type="checkbox" data-chk="${chkIndex++}" ${done ? 'checked' : ''}/><span>${chk[2]}</span></label>`;
         continue;
       }
       if (inChk) { html += '</div>'; inChk = false; }
@@ -622,7 +622,9 @@
           if (supa) {
             const { data: { session } } = await supa.auth.getSession();
             if (session && session.user) {
-              Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
+              // lembrar-me desmarcado na última sessão → não restaura login
+              if (Store.data.ui && Store.data.ui.rememberMe === false) { try { await supa.auth.signOut(); } catch {} Store.setUser(null); }
+              else Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
             }
           }
         } catch (e) { /* offline/timeout, mantém Store.user local */ }
@@ -1048,7 +1050,15 @@
       const revealPassword = () => {
         if (passField) passField.classList.remove('hidden');
         if (links) links.classList.remove('hidden');
+        if ($('#remember-row')) $('#remember-row').classList.remove('hidden');
         if (passInput) { passInput.required = true; passInput.focus(); }
+      };
+      // aplica "lembrar-me": unchecked → não auto-loga na próxima visita
+      const applyRemember = () => {
+        const rm = $('#remember-me');
+        Store.data.ui = Store.data.ui || {};
+        Store.data.ui.rememberMe = rm ? !!rm.checked : true;
+        Store.save();
       };
 
       // toggle senha
@@ -1102,6 +1112,7 @@
             } else {
               const { error } = await supa.auth.signInWithPassword({ email: mail, password: pass });
               if (error) throw error;
+              applyRemember();
               const { data: { session } } = await supa.auth.getSession();
               if (session && session.user) {
                 Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
@@ -1145,7 +1156,10 @@
           supa._bound = true; // marca para não duplicar onAuthStateChange
           supa.auth.getSession().then(({ data: { session } }) => {
             if (session && session.user) {
+              // "lembrar-me" desmarcado → encerra a sessão local (não auto-loga)
+              if (Store.data.ui && Store.data.ui.rememberMe === false) { supa.auth.signOut(); return; }
               const wasLogged = !!Store.user;
+              applyRemember();
               Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
               if (!wasLogged) this.renderAuthOrApp();
             }
@@ -1666,8 +1680,31 @@
         img.style.cursor = 'zoom-in';
         img.addEventListener('click', (e) => { e.stopPropagation(); this.openLightbox(img.src); });
       });
+      // Checkboxes clicáveis: marcar/desmarcar persiste no texto da nota
+      div.querySelectorAll('.md-check input[type="checkbox"]').forEach((cb) => {
+        cb.addEventListener('click', (e) => e.stopPropagation());
+        cb.addEventListener('change', () => this.toggleNoteCheckbox(clientId, +cb.dataset.chk, cb.checked));
+      });
 
       return div;
+    },
+
+    // marca/desmarca o N-ésimo checkbox do texto ([ ] ↔ [x]) e sincroniza
+    toggleNoteCheckbox(clientId, index, checked) {
+      const arr = Store.notesFor(this.activeThread); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
+      let i = -1;
+      const lines = (n.text || '').split('\n');
+      const newLines = lines.map((l) => {
+        const m = l.match(/^(\s*)\[( |x)\]\s*(.*)$/i);
+        if (!m) return l;
+        i += 1;
+        if (i !== index) return l;
+        return `${m[1]}[${checked ? 'x' : ' '}] ${m[3]}`;
+      });
+      if (i < index) return; // índice inválido
+      n.text = newLines.join('\n'); n.editedAt = now(); n.rev = (n.rev || 0) + 1; Store.save();
+      Sync.send('note:edit', { threadId: this.activeThread, clientId, text: n.text, edited: !!n.edited, editedAt: n.editedAt, rev: n.rev });
+      this._replaceBubble(clientId, n);
     },
 
     openLightbox(src) {
@@ -1824,56 +1861,52 @@
     },
 
     // ---------- Ações de nota: editar (in-line) / pin / excluir ----------
+    // substitui a bolha preservando listeners (outerHTML perde eventos → arrow morta)
+    _replaceBubble(clientId, note) {
+      const fresh = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
+      if (fresh) fresh.replaceWith(this.bubbleEl(note));
+    },
     editNoteInline(clientId) {
       const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
       if (!el || el.isContentEditable) return;
       const arr = Store.notesFor(this.activeThread); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
-      // separa o texto (primeiro filho de texto) da meta/toggle que ficam no final
       const meta = el.querySelector('.meta'); const toggle = el.querySelector('.msg-toggle');
       const pinBadge = el.querySelector('.pin-badge');
       el.setAttribute('contenteditable', 'true');
       el.classList.add('editing');
-      // conteúdo editável = só o texto (remove meta/toggle temporariamente)
       el.textContent = n.text;
-      // recoloca meta e toggle
       if (meta) el.appendChild(meta);
       if (toggle) el.appendChild(toggle);
       if (pinBadge) el.insertBefore(pinBadge, el.firstChild);
 
-      // posiciona cursor no final
       const sel = window.getSelection(); const range = document.createRange();
       range.selectNodeContents(el); range.collapse(false);
       sel.removeAllRanges(); sel.addRange(range);
 
+      let done = false;
       const finish = (save) => {
+        if (done) return; done = true; // Enter + blur disparavam 2× (timer duplicado)
         el.removeAttribute('contenteditable');
         el.classList.remove('editing');
         el.removeEventListener('keydown', onKey);
         el.removeEventListener('blur', onBlur);
         if (save) {
-          const v = el.textContent.replace(/\s+$/, '').trim();
-          // remove qualquer lixo de meta que possa ter ficado
-          const clean = v;
-          if (clean && clean !== n.text) {
-            const updated = Store.editNote(this.activeThread, clientId, clean);
+          // lê SÓ o texto digitado — ignora meta/toggle (antes textContent incluía "10:30" → timer duplicado)
+          const clone = el.cloneNode(true);
+          clone.querySelectorAll('.meta,.msg-toggle,.pin-badge,.md-checklist').forEach((r) => r.remove());
+          const v = clone.textContent.replace(/\s+$/, '').trim() || clone.textContent.replace(/[\n\r]+$/, '');
+          if (v && v !== n.text) {
+            const updated = Store.editNote(this.activeThread, clientId, v);
             if (updated) {
               Sync.send('note:edit', { threadId: this.activeThread, clientId, text: updated.text, edited: updated.edited, editedAt: updated.editedAt, rev: updated.rev });
-              // re-render para voltar ao formato normal (com meta/editado)
               this.renderedClientIds.delete(clientId);
-              const fresh = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
-              if (fresh) fresh.outerHTML = this.bubbleEl(Store.notesFor(this.activeThread).find((x) => x.clientId === clientId)).outerHTML;
+              this._replaceBubble(clientId, Store.notesFor(this.activeThread).find((x) => x.clientId === clientId) || updated);
+              return;
             }
-          } else {
-            // restaura
-            this.renderedClientIds.delete(clientId);
-            const fresh = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
-            if (fresh) fresh.outerHTML = this.bubbleEl(n).outerHTML;
           }
-        } else {
-          this.renderedClientIds.delete(clientId);
-          const fresh = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
-          if (fresh) fresh.outerHTML = this.bubbleEl(n).outerHTML;
         }
+        this.renderedClientIds.delete(clientId);
+        this._replaceBubble(clientId, n);
       };
       const onKey = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(true); }
@@ -1885,9 +1918,20 @@
       setTimeout(() => el.focus(), 20);
     },
     confirmDeleteNote(clientId) {
-      if (!confirm('Excluir esta nota?')) return;
-      this.deleteNote(clientId);
-      Sound.play('delete'); haptic('delete');
+      const arr = Store.notesFor(this.activeThread); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
+      const preview = (n.text || '').slice(0, 80);
+      const body = `
+        <p style="font-size:14px;line-height:1.55;color:var(--text)">Excluir esta nota?</p>
+        ${preview ? `<div style="font-size:13px;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px;max-height:100px;overflow-y:auto">${esc(preview)}${(n.text||'').length > 80 ? '…' : ''}</div>` : ''}
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px">Você poderá desfazer por 10 segundos após excluir.</p>`;
+      this.showModal('Excluir nota', body, () => {
+        this.closeModal();
+        this.deleteNote(clientId);
+        Sound.play('delete'); haptic('delete');
+      });
+      const okBtn = this.dom.modalOk;
+      okBtn.classList.add('btn-danger');
+      okBtn.textContent = 'Excluir';
     },
     async copyNote(clientId) {
       const arr = Store.notesFor(this.activeThread); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
@@ -1913,8 +1957,7 @@
         if (updated) {
           Sync.send('note:tags', { threadId: this.activeThread, clientId, tags: updated.tags });
           this.renderedClientIds.delete(clientId);
-          const fresh = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
-          if (fresh) fresh.outerHTML = this.bubbleEl(updated).outerHTML;
+          this._replaceBubble(clientId, updated);
         }
         this.closeModal();
       });
@@ -2421,18 +2464,12 @@
         const incomingRev = rev || 0, localRev = n.rev || 0;
         if (incoming < local || (incoming === local && incomingRev <= localRev)) return; // mantém o local
         n.text = text; n.edited = edited; n.editedAt = editedAt; n.rev = incomingRev; Store.save();
-        if (this.activeThread === threadId) {
-          const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
-          if (el) { el.outerHTML = this.bubbleEl(n).outerHTML; }
-        }
+        if (this.activeThread === threadId) this._replaceBubble(clientId, n);
       });
       Sync.on('note:tags', ({ threadId, clientId, tags }) => {
         const arr = Store.notesFor(threadId); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
         n.tags = tags || []; Store.save();
-        if (this.activeThread === threadId) {
-          const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
-          if (el) el.outerHTML = this.bubbleEl(n).outerHTML;
-        }
+        if (this.activeThread === threadId) this._replaceBubble(clientId, n);
       });
       Sync.on('note:pin', ({ threadId, clientId }) => {
         const th = Store.getThread(threadId); if (!th) return;

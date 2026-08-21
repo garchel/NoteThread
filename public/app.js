@@ -29,13 +29,13 @@
   const SUPABASE_URL = (typeof window !== 'undefined' && window.SUPABASE_URL) || '';
   const SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) || '';
   const USE_SUPABASE = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
-  // singleton Supabase client — evita Multiple GoTrueClient warning + loop
-  let _supaSingleton = null;
-  async function getSupa() {
-    if (_supaSingleton) return _supaSingleton;
-    const m = await import('https://esm.sh/@supabase/supabase-js@2');
-    _supaSingleton = m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    return _supaSingleton;
+  // singleton Supabase client — memoiza a PROMISE para chamadas concorrentes
+  let _supaPromise = null;
+  function getSupa() {
+    if (!_supaPromise) {
+      _supaPromise = import('https://esm.sh/@supabase/supabase-js@2').then(m => m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    }
+    return _supaPromise;
   }
   // ---------------------------------------------------------------------
 

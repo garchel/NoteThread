@@ -1,6 +1,6 @@
 // NoteThread Service Worker — app shell offline + cache-first para assets.
 // Bump CACHE (vN) a cada deploy para invalidar versões anteriores.
-const CACHE = 'notethread-v12';
+const CACHE = 'notethread-v13';
 const ASSETS = [
   './', './index.html', './app.js', './styles.css',
   './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './icon-1024.png',
@@ -26,6 +26,10 @@ self.addEventListener('fetch', (e) => {
   if (url.protocol === 'ws:' || url.protocol === 'wss:') return;
   // nunca interceptar o sync server (WebSocket/http de dados)
   if (url.port === '3001') return;
+  // fonts: deixar o browser buscar direto (SW fetch cai no connect-src do CSP)
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') return;
+  // supabase/esm.sh: idem — não responder via SW
+  if (url.hostname.endsWith('.supabase.co') || url.hostname === 'esm.sh') return;
 
   e.respondWith(
     caches.match(req).then((cached) => {

@@ -29,6 +29,14 @@
   const SUPABASE_URL = (typeof window !== 'undefined' && window.SUPABASE_URL) || '';
   const SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) || '';
   const USE_SUPABASE = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+  // singleton Supabase client — evita Multiple GoTrueClient warning + loop
+  let _supaSingleton = null;
+  async function getSupa() {
+    if (_supaSingleton) return _supaSingleton;
+    const m = await import('https://esm.sh/@supabase/supabase-js@2');
+    _supaSingleton = m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return _supaSingleton;
+  }
   // ---------------------------------------------------------------------
 
   // helper para feedback tátil (mobile)
@@ -366,10 +374,10 @@
       this._connecting = true;
       this.setStatus('connecting');
       if (!USE_SUPABASE) { this._connecting = false; return WSSync.connect.call(this); }
+      if (this.connected && this.supa) { this._connecting = false; return; }
       const t = setTimeout(() => { if (!this.connected) { this.setStatus('offline'); console.warn('[supabase] connect timeout'); } this._connecting = false; }, 8000);
       try {
-        const m = await import('https://esm.sh/@supabase/supabase-js@2');
-        this.supa = m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        this.supa = await getSupa();
         const { data: { session } } = await this.supa.auth.getSession();
         this.supa.auth.onAuthStateChange((_ev, sess) => {
           if (sess && sess.user) {
@@ -917,8 +925,7 @@
     async _ensureSupa() {
       if (this._getSupa()) return this._getSupa();
       if (!USE_SUPABASE) return null;
-      const m = await import('https://esm.sh/@supabase/supabase-js@2');
-      const c = m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const c = await getSupa();
       if (SupaSync) SupaSync.supa = c;
       return c;
     },

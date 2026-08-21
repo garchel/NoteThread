@@ -1,0 +1,14 @@
+{
+  "name": "notethread",
+  "version": "1.0.0",
+  "description": "NoteThread — bloco de notas em formato de chat/threads infinitas com sync em tempo real e offline-first.",
+  "scripts": {
+    "start": "node server/start.js",
+    "server": "node server/index.js",
+    "check": "node --check server/www.js && node --check server/sync.js && node --check public/app.js && echo \"syntax ok\"",
+    "health": "node server/www.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

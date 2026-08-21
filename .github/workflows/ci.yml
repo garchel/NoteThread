@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci || npm install
+      - name: Lint (syntax check)
+        run: node --check server/www.js && node --check server/sync.js && node --check public/app.js
+      - name: Start server + health check
+        run: |
+          PORT=3001 node server/www.js &
+          sleep 2
+          curl -f http://localhost:3001/health
+          curl -f http://localhost:3001/ | head -n 5
+          kill %1 || true
+      - name: Headers check
+        run: |
+          PORT=3002 node server/www.js &
+          sleep 2
+          curl -s -D - http://localhost:3002/health -o /dev/null | grep -i "X-Content-Type-Options"
+          curl -s -D - http://localhost:3002/ -o /dev/null | grep -i "Content-Security-Policy"
+          kill %1 || true

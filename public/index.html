@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#7c5cff" id="meta-theme" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>NoteThread</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- ===== LOGIN ===== -->
+  <div id="auth-screen" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="brand">
+        <div class="brand-logo">🧵</div>
+        <h1>NoteThread</h1>
+        <p class="tagline">Suas ideias, em threads infinitas. Sincronizadas em tempo real.</p>
+      </div>
+      <button id="btn-google" class="btn-google">
+        <span class="g-icon">G</span> Entrar com Google
+      </button>
+      <div class="divider"><span>ou</span></div>
+      <form id="email-form" class="email-form">
+        <input id="email-input" type="email" placeholder="seu@email.com" autocomplete="email" />
+        <button type="submit" class="btn-primary">Continuar com e-mail</button>
+      </form>
+      <p class="auth-note">Cross-platform · Offline-first · Real-time sync</p>
+    </div>
+  </div>
+
+  <!-- ===== APP ===== -->
+  <div id="app" class="app hidden">
+    <!-- Sidebar (árvore de threads/pastas estilo IDE) -->
+    <aside id="sidebar" class="sidebar">
+      <div class="tree-toolbar">
+        <div class="tree-title">Explorador</div>
+        <div class="tree-actions">
+          <button id="btn-new-folder" class="btn-icon-sm" title="Nova pasta"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
+          <button id="btn-new-thread" class="btn-icon-sm" title="Nova conversa"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Busca -->
+      <div class="search-box">
+        <span class="search-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <input id="search-input" type="search" placeholder="Buscar notas e conversas…" autocomplete="off" />
+        <button id="search-clear" class="search-clear hidden" title="Limpar">×</button>
+      </div>
+      <div id="search-results" class="search-results hidden"></div>
+
+      <!-- Seção Favoritos (sempre no topo) -->
+      <div id="fav-section" class="fav-section hidden">
+        <div class="fav-label"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><polygon points="12 2 15 9 22 9.3 17 14 18.5 21 12 17 5.5 21 7 14 2 9.3 9 9"/></svg> Favoritos</div>
+        <div id="fav-list" class="fav-list"></div>
+      </div>
+
+      <div id="tree" class="tree"></div>
+
+      <!-- Rodapé unificado: perfil + status + sair -->
+      <footer id="sidebar-footer" class="sidebar-footer">
+        <div class="me">
+          <div class="avatar" id="me-avatar">U</div>
+          <div class="me-info">
+            <div class="me-name" id="me-name">Usuário</div>
+            <div class="me-mail" id="me-mail"></div>
+          </div>
+        </div>
+        <div class="footer-actions">
+          <button id="sync-status" class="sync-status offline" title="Status de sincronização"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg></button>
+          <button id="btn-logout" class="btn-link" title="Sair"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+        </div>
+      </footer>
+    </aside>
+
+    <!-- Coluna de chat -->
+    <main class="chat">
+      <button id="btn-pin" class="btn-pin hidden" title="Mensagem fixada" aria-label="Mensagem fixada"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="none"><path d="M12 2 C9.5 2 8 4 8 6.5 c0 1.6 .7 2.7 1.6 3.6 L6 17.5 a1 1 0 0 0 .9 1.5 h10.2 a1 1 0 0 0 .9-1.5 L14.4 10.1 c.9-.9 1.6-2 1.6-3.6 C16 4 14.5 2 12 2 z"/></svg></button>
+
+      <div id="chat-active-ui" class="chat-active-ui">
+        <header id="chat-header" class="chat-header">
+          <button id="btn-back" class="btn-icon mobile-only" title="Voltar">‹</button>
+          <div class="chat-title">
+            <div class="chat-name" id="chat-name">Selecione uma conversa</div>
+          </div>
+          <button id="btn-settings" class="btn-icon-sm header-btn" title="Configurações"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+        </header>
+
+        <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Mensagens da conversa">
+          <div id="load-older" class="load-older hidden">Carregar mensagens anteriores…</div>
+          <div id="empty-state" class="empty-state">
+            <div class="empty-emoji"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 9 9 0 0 1-4-1L3 20l1.5-5.5a8.5 8.5 0 1 1 16.5-3z"/></svg></div>
+            <p class="es-hint">Nada por aqui ainda</p>
+            <p>Escolha uma conversa à esquerda ou crie uma nova.<br/>Suas notas aparecem aqui como mensagens — e se sincronizam em todos os seus dispositivos.</p>
+          </div>
+        </div>
+
+        <div id="attach-preview" class="attach-preview hidden"></div>
+        <div class="composer">
+          <div class="composer-bar">
+            <button type="button" class="fmt-btn" data-fmt="bold" title="Negrito (Ctrl/⌘+B)" aria-label="Negrito"><b>B</b></button>
+            <button type="button" class="fmt-btn" data-fmt="italic" title="Itálico (Ctrl/⌘+I)" aria-label="Itálico"><i>I</i></button>
+            <button type="button" class="fmt-btn" data-fmt="code" title="Código (Ctrl/⌘+K)" aria-label="Código">&lt;/&gt;</button>
+            <button type="button" class="fmt-btn" data-fmt="list" title="Lista" aria-label="Lista">☰</button>
+          </div>
+          <div class="composer-row">
+            <button id="btn-attach" class="btn-attach" title="Anexar imagem" aria-label="Anexar imagem"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+            <input type="file" id="file-input" accept="image/*" hidden aria-hidden="true" />
+            <textarea id="composer-input" placeholder="Escreva uma nota… (Enter envia, Shift+Enter quebra linha)" rows="1" disabled aria-label="Escreva uma nota" style="overflow-y:hidden"></textarea>
+            <button id="btn-send" class="btn-send" disabled aria-label="Enviar nota"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Menu de contexto da thread -->
+  <div id="ctx-menu" class="ctx-menu hidden">
+    <button data-act="fav"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.3 17 14 18.5 21 12 17 5.5 21 7 14 2 9.3 9 9"/></svg> Favoritar</button>
+    <button data-act="unfav"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.3 17 14 18.5 21 12 17 5.5 21 7 14 2 9.3 9 9"/></svg> Remover dos favoritos</button>
+    <button data-act="rename"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Renomear</button>
+    <button data-act="move"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg> Mover para pasta…</button>
+    <button data-act="delete" class="danger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Excluir</button>
+  </div>
+
+  <!-- Popover de ações da mensagem (Editar / Excluir / Pinar) -->
+  <div id="msg-popover" class="popover hidden" role="menu">
+    <button data-msg="edit"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar</button>
+    <button data-msg="tags"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Etiquetas</button>
+    <button data-msg="pin"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 4 3v2H6l4-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg> Pinar mensagem</button>
+    <button data-msg="unpin" class="hidden"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 4 3v2H6l4-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/><line x1="3" y1="3" x2="21" y2="21"/></svg> Desfixar</button>
+    <button data-msg="copy"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar</button>
+    <button data-msg="delete" class="danger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Excluir</button>
+  </div>
+
+  <!-- Popover de configurações -->
+  <div id="settings-popover" class="popover settings-popover hidden" role="menu">
+    <div class="settings-section">
+      <div class="settings-label">Tema</div>
+      <div class="theme-grid" id="theme-grid">
+        <button class="theme-chip" data-set="theme" data-val="lavender" title="Lavanda"><span class="swatch" style="--c1:#7c5cff;--c2:#f5b942;--c3:#efeaff"></span><span class="theme-name">Lavanda</span></button>
+        <button class="theme-chip" data-set="theme" data-val="dark" title="Escuro"><span class="swatch" style="--c1:#8b6cff;--c2:#46c98a;--c3:#221d2e"></span><span class="theme-name">Escuro</span></button>
+        <button class="theme-chip" data-set="theme" data-val="mint" title="Hortelã"><span class="swatch" style="--c1:#1faa86;--c2:#e8a33d;--c3:#dcf3ea"></span><span class="theme-name">Hortelã</span></button>
+        <button class="theme-chip" data-set="theme" data-val="peach" title="Pêssego"><span class="swatch" style="--c1:#ff7a59;--c2:#f3b13a;--c3:#ffdccf"></span><span class="theme-name">Pêssego</span></button>
+        <button class="theme-chip" data-set="theme" data-val="ocean" title="Oceano"><span class="swatch" style="--c1:#2b8fd6;--c2:#e8a33d;--c3:#d9edfa"></span><span class="theme-name">Oceano</span></button>
+        <button class="theme-chip" data-set="theme" data-val="midnight" title="Meia-noite"><span class="swatch" style="--c1:#4f8cff;--c2:#f5b942;--c3:#1a2745"></span><span class="theme-name">Meia-noite</span></button>
+        <button class="theme-chip" data-set="theme" data-val="auto" title="Automático (segue o sistema)"><span class="swatch" style="--c1:#7c5cff;--c2:#46c98a;--c3:#9aa0b5"></span><span class="theme-name">Auto</span></button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">Ordenar conversas</div>
+      <div class="seg" id="sort-seg">
+        <button class="seg-btn" data-set="sort" data-val="recent" title="Mais recentes">Recentes</button>
+        <button class="seg-btn" data-set="sort" data-val="name" title="Ordem alfabética">Nome</button>
+        <button class="seg-btn" data-set="sort" data-val="manual" title="Arraste para ordenar">Manual</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-label">Sons</div>
+      <div class="sound-row">
+        <label class="switch"><input type="checkbox" id="sound-enabled" /><span class="slider"></span></label>
+        <span class="sound-caption">Ativar sons da interface</span>
+      </div>
+      <div class="sound-row">
+        <span class="sound-caption">Volume</span>
+        <input type="range" id="sound-volume" min="0" max="1" step="0.05" value="0.6" />
+      </div>
+      <div id="sound-actions" class="sound-actions">
+        <div class="sound-assign"><span>Enviar nota</span><select data-sound="send"><option value="">—</option></select></div>
+        <div class="sound-assign"><span>Fixar mensagem</span><select data-sound="pin"><option value="">—</option></select></div>
+        <div class="sound-assign"><span>Favoritar</span><select data-sound="favorite"><option value="">—</option></select></div>
+        <div class="sound-assign"><span>Excluir</span><select data-sound="delete"><option value="">—</option></select></div>
+        <div class="sound-assign"><span>Criar item</span><select data-sound="create"><option value="">—</option></select></div>
+        <div class="sound-assign"><span>Erro</span><select data-sound="error"><option value="">—</option></select></div>
+        <div class="sound-assign"><span>Abrir conversa</span><select data-sound="open"><option value="">—</option></select></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-label">Dados</div>
+      <button data-set="export"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar notas (JSON)</button>
+      <button data-set="clear" class="danger"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Apagar tudo</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-label">Sincronização</div>
+      <button data-set="reconnect"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 1 1 18 6.7L23 10"/></svg> Reconectar agora</button>
+    </div>
+  </div>
+
+  <!-- Popover da mensagem pinada -->
+  <div id="pin-popover" class="popover pin-popover hidden" role="dialog">
+    <div class="pin-top">
+      <div class="pin-head"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 4 3v2H6l4-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg> Mensagem fixada</div>
+      <div class="pin-actions">
+        <button id="pin-jump" class="icon-btn" title="Ir para mensagem"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="7" x2="17" y2="17"/><polyline points="17 7 17 17 7 17"/></svg></button>
+        <button id="pin-edit" class="icon-btn" title="Editar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        <button id="pin-unpin" class="icon-btn" title="Desfixar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 4 3v2H6l4-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/><line x1="3" y1="3" x2="21" y2="21"/></svg></button>
+      </div>
+    </div>
+    <div id="pin-body" class="pin-body"></div>
+  </div>
+
+  <!-- Modal genérico -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="modal-title">Título</h3>
+      <div id="modal-body"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel" class="btn-ghost">Cancelar</button>
+        <button id="modal-ok" class="btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIGURAÇÃO (APK/produção): descomente e defina a URL do servidor de sync.
+       No desenvolvimento local (npm start) deixe vazio para usar http://HOST:3001 automaticamente.
+  <script>window.NOTE_THREAD_SYNC_URL = 'wss://notethread.seu-servidor.com';</script>
+  -->
+  <script src="app.js"></script>
+</body>
+</html>

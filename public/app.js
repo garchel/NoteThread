@@ -1919,27 +1919,22 @@
         else if (mod && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); this.applyFormat('italic'); }
         else if (mod && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.applyFormat('code'); }
         else if (mod && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); this.applyFormat('checklist'); }
-        else if (e.key === 'Enter' && !e.shiftKey) {
-          // dentro de um item de checklist: Enter continua a lista em vez de enviar
+        else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendNote(); }
+        else if (e.key === 'Enter' && e.shiftKey) {
+          // Shift+Enter: quebra linha; se a linha atual é item de checklist ou bullet,
+          // continua a lista na próxima linha
+          e.preventDefault();
           const pos = ta.selectionStart;
           const lineStart = ta.value.lastIndexOf('\n', pos - 1) + 1;
           const curLine = ta.value.slice(lineStart, pos);
-          const mChk = curLine.match(/^(\[x\]|\[ \])\s*(.*)$/i);
-          if (mChk) {
-            e.preventDefault();
-            if (mChk[2].trim() === '') {
-              // item vazio + Enter = sai da lista (remove o "[ ] ")
-              ta.value = ta.value.slice(0, lineStart) + mChk[2] + ta.value.slice(pos);
-              ta.selectionStart = ta.selectionEnd = lineStart;
-            } else {
-              const ins = '\n[ ] ';
-              ta.value = ta.value.slice(0, pos) + ins + ta.value.slice(pos);
-              ta.selectionStart = ta.selectionEnd = pos + ins.length;
-            }
-            ta.dispatchEvent(new Event('input', { bubbles: true }));
-            return;
-          }
-          e.preventDefault(); this.sendNote();
+          let ins = '\n';
+          const mChk = curLine.match(/^(\[x\]|\[ \])\s+/i);
+          const mBul = curLine.match(/^(\s*)[-*]\s+/);
+          if (mChk) ins = '\n[ ] ';
+          else if (mBul) ins = '\n' + mBul[1] + '- ';
+          ta.value = ta.value.slice(0, pos) + ins + ta.value.slice(ta.selectionEnd);
+          ta.selectionStart = ta.selectionEnd = pos + ins.length;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
         }
       });
       // barra de formatação

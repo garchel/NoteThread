@@ -1500,9 +1500,23 @@
       if (this.tnodeLongPressTimer) { clearTimeout(this.tnodeLongPressTimer); this.tnodeLongPressTimer = null; }
     },
 
-    // atualiza a contagem de notas na sidebar (re-render leve da árvore)
+    // atualiza a contagem de notas na sidebar — cirúrgico, sem reconstruir a árvore
     updateNoteCount() {
-      this.renderTree();
+      Store.threadList().forEach((t) => {
+        const count = Store.notesFor(t.id).length;
+        document.querySelectorAll(`.tnode[data-tid="${t.id}"]`).forEach((el) => {
+          let c = el.querySelector('.note-count');
+          if (!count) { if (c) c.remove(); return; }
+          if (!c) {
+            c = document.createElement('span');
+            c.className = 'note-count';
+            const star = el.querySelector('.star');
+            if (star) el.insertBefore(c, star); else el.appendChild(c);
+          }
+          c.textContent = count;
+          c.title = `${count} nota${count !== 1 ? 's' : ''}`;
+        });
+      });
     },
 
     renderFavorites() {
@@ -1642,7 +1656,9 @@
       $('#composer-input').disabled = false; $('#btn-send').disabled = false;
       this.dom.pinPopover.classList.add('hidden');
       this.updatePinButton();
-      this.renderTree();
+      // destaca a thread ativa sem reconstruir a árvore (evita re-render do explorador)
+      document.querySelectorAll('.tnode.active').forEach((el) => el.classList.remove('active'));
+      document.querySelectorAll(`.tnode[data-tid="${id}"]`).forEach((el) => el.classList.add('active'));
       this.renderMessages(true);
       this.setChatActiveUi(true);
     },

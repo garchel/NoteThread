@@ -17,8 +17,8 @@ describe('PWA', ()=>{
     assert.equal(m.icons.length,4);
     assert.ok(m.icons.find(i=>i.sizes==='1024x1024'));
   });
-  it('sw.js é v29', ()=>{
+  it('sw.js é v30', ()=>{
     const sw=readFileSync('public/sw.js','utf8');
-    assert.match(sw, /notethread-v29/);
+    assert.match(sw, /notethread-v30/);
   });
 });

@@ -2000,11 +2000,9 @@
     },
     confirmDeleteNote(clientId) {
       const arr = Store.notesFor(this.activeThread); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
-      const preview = (n.text || '').slice(0, 80);
       const body = `
-        <p style="font-size:14px;line-height:1.55;color:var(--text)">Excluir esta nota?</p>
-        ${preview ? `<div style="font-size:13px;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px;max-height:100px;overflow-y:auto">${esc(preview)}${(n.text||'').length > 80 ? '…' : ''}</div>` : ''}
-        <p style="font-size:13px;color:var(--text-dim);margin-top:8px">Você poderá desfazer por 10 segundos após excluir.</p>`;
+        <div class="del-note-preview">${renderMarkdown(n.text || '', false)}</div>
+        <p class="del-note-hint">Você poderá desfazer por 10 segundos após excluir.</p>`;
       this.showModal('Excluir nota', body, () => {
         this.closeModal();
         this.deleteNote(clientId);

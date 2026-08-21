@@ -110,16 +110,16 @@
 | # | Task | Detalhe | Aceite |
 |---|------|---------|--------|
 | P6.1 | **Busca com filtros** | Busca atual é substring simples (`app.js runSearch`); adicionar sintaxe `in:trabalho #urgente depois:2026-01` — filtro por thread/pasta/tag/data. Transforma o app para usuários com muitas notas | Filtros funcionam na busca global e nos resultados |
-| P6.2 | **Backlinks/menções** | Digitar `@` numa nota referencia outra thread (autocomplete de threads); nota citada ganha link clicável e seção "mencionada em". Natural num app "chat consigo mesmo" — nenhum concorrente faz bem | `@` abre autocomplete; backlink bidirecional navegável |
-| P6.3 | **Lembretes/notifications** | Threads como "Renovar CNH" pedem data + `Notification API` / push (Capacitor v2). Hoje o pin é o único destaque | Nota com lembrete dispara notificação na data |
+| P6.2 | ✅ **Backlinks/menções** | Implementado `73a38e7`: `@` abre autocomplete no composer; token `@[Nome](t:id)` persistido; chip clicável navega para a thread. Falta: seção "mencionado em" (backlink reverso) na thread citada | ✅ `@` abre autocomplete; chip navegável · ⏳ backlink reverso |
+| P6.3 | ✅ **Lembretes/notifications** | Implementado `73a38e7`: "Lembrar-me" no menu ▾ (datetime), colunas `remind_at/remind_fired`, scheduler 20s + Notification API + toast, badge ⏰ no explorador. Push com app fechado → v2 Capacitor (`V5.6`) | ✅ Notificação dispara com app aberto |
 
 ### Arquitetura (dívida que cobra juros)
 
 | # | Task | Detalhe | Aceite |
 |---|------|---------|--------|
 | A6.4 | **Quebrar o `app.js` (~2.6k linhas)** | Store/Sync/UI num arquivo só já dificultou os bugs caçados (o `clientId` ReferenceError foi sintoma). ES Modules nativos: `js/store.js`, `js/sync-supabase.js`, `js/ui/*.js` — **sem build step** | Nenhum arquivo >500 linhas; `npm start` e Vercel sem bundler |
-| A6.5 | **Remover o legado** | `WSSync` + `server/*` são código morto desde a migração Supabase (~400 linhas): `server/www.js`, `server/sync.js`, `server/index.js`, `server/static.js`, branch WS do Sync | Deletar ou extrair para `legacy/`; deploy continua verde |
-| A6.6 | **Testes do fluxo real** | Os 8 testes atuais cobrem Store/config, mas o bug do `clientId` mostrou que falta e2e do caminho crítico: **login → criar thread → marcar checkbox → recarregar → estado persiste** | Playwright roda no CI (`ci.yml`) contra build local |
+| A6.5 | ✅ **Remover o legado** | Removido `17cdd5d`: `server/*` (www/sync/index/static/start), `Procfile`, `attachtest.js`, `WSSync`/`SYNC_URL` no app.js, dep `ws`. Sync = SupaSync direto; sem config → offline honesto | ✅ Deletado; deploy verde |
+| A6.6 | ✅ **Testes do fluxo real** | Implementado `17cdd5d`: Playwright + servidor estático zero-dep. 2 specs verdes: (1) criar thread → nota com checkbox → marcar → reload → persiste; (2) menção `@` → token → chip → navegação. Roda no CI (`ci.yml`) | ✅ `npm run e2e` verde local e CI |
 
 ### Robustez
 

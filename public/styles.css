@@ -876,17 +876,8 @@ button:focus { outline: none; }
 }
 .md-check.done span { text-decoration: line-through; opacity: .6; }
 
-/* Preview no modal de exclusão de nota */
-.del-note-preview {
-  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
-  padding: 12px 14px; margin-top: 4px;
-  font-size: 14px; line-height: 1.55; color: var(--text);
-  max-height: 180px; overflow-y: auto; word-wrap: break-word; white-space: pre-wrap;
-}
-/* componentes inertes no preview: sem interação, só leitura */
-.del-note-preview input[type="checkbox"] { pointer-events: none; }
-.del-note-preview .md-check { cursor: default; }
-.del-note-hint { font-size: 12.5px; color: var(--text-dim); margin-top: 10px; }
+/* Modal de exclusão de nota */
+.del-note-hint { font-size: 13.5px; line-height: 1.55; color: var(--text-dim); margin-top: 4px; }
 /* fade out suave ao ocultar item concluído (setting hideDoneChecks) */
 .md-check { transition: opacity .25s ease, transform .25s ease, max-height .25s ease; max-height: 60px; overflow: hidden; }
 .md-check.chk-out { opacity: 0; transform: translateX(10px); max-height: 0; margin-bottom: -4px; }

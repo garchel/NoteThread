@@ -875,6 +875,9 @@ button:focus { outline: none; }
   border: solid var(--accent); border-width: 0 2px 2px 0; transform: rotate(45deg);
 }
 .md-check.done span { text-decoration: line-through; opacity: .6; }
+/* fade out suave ao ocultar item concluído (setting hideDoneChecks) */
+.md-check { transition: opacity .25s ease, transform .25s ease, max-height .25s ease; max-height: 60px; overflow: hidden; }
+.md-check.chk-out { opacity: 0; transform: translateX(10px); max-height: 0; margin-bottom: -4px; }
 .bubble.remote code { background: rgba(0,0,0,.12); }
 
 /* ===================== LIGHTBOX DE IMAGENS ===================== */

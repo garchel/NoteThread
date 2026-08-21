@@ -141,7 +141,7 @@
   // Renderiza markdown básico e SEGURO (escapa HTML primeiro, depois aplica).
   // Suporta: **negrito**, *itálico*, `código`, #tags (mantidas como chip),
   // listas (- ou * por linha), e quebras de linha. Não faz HTML cru passar.
-  const renderMarkdown = (raw) => {
+  const renderMarkdown = (raw, hideDone) => {
     if (!raw) return '';
     // 1) escapa tudo (sem risco de XSS)
     let s = esc(raw);
@@ -164,7 +164,9 @@
         if (inList) { html += '</ul>'; inList = false; }
         if (!inChk) { html += '<div class="md-checklist">'; inChk = true; }
         const done = chk[1].toLowerCase() === 'x';
-        html += `<label class="md-check${done ? ' done' : ''}"><input type="checkbox" data-chk="${chkIndex++}" ${done ? 'checked' : ''}/><span>${chk[2]}</span></label>`;
+        const idx = chkIndex++;
+        if (hideDone && done) continue; // oculto: mantém o índice p/ mapear o texto
+        html += `<label class="md-check${done ? ' done' : ''}"><input type="checkbox" data-chk="${idx}" ${done ? 'checked' : ''}/><span>${chk[2]}</span></label>`;
         continue;
       }
       if (inChk) { html += '</div>'; inChk = false; }
@@ -962,6 +964,16 @@
       const s = (Store.data.ui && Store.data.ui.sounds) || { enabled: false, volume: 0.6, map: {} };
       const en = $('#sound-enabled'); if (en) en.checked = !!s.enabled;
       const vol = $('#sound-volume'); if (vol) vol.value = (typeof s.volume === 'number' ? s.volume : 0.6);
+      // ---- Checklists: ocultar concluídos ----
+      const hd = $('#chk-hide-done');
+      if (hd) {
+        hd.checked = !!(Store.data.ui && Store.data.ui.hideDoneChecks);
+        hd.addEventListener('change', () => {
+          Store.data.ui = Store.data.ui || {};
+          Store.data.ui.hideDoneChecks = hd.checked; Store.save();
+          if (this.activeThread) { this.renderedClientIds = new Set(); this.renderMessages(true); }
+        });
+      }
       // preenche selects com a lista de sons do cuelume
       const selects = p.querySelectorAll('select[data-sound]');
       selects.forEach((sel) => {
@@ -1711,7 +1723,8 @@
       const tags = (n.tags && n.tags.length) ? `<div class="bubble-tags">${n.tags.map((t) => `<span class="tag-chip">#${esc(t)}</span>`).join('')}</div>` : '';
       const imgs = (n.images && n.images.length) ? `<div class="bubble-images">${n.images.map((src) => `<img class="bubble-img" src="${src}" alt="anexo" loading="lazy"/>`).join('')}</div>` : '';
 
-      div.innerHTML = `${pinBadge}${imgs}${renderMarkdown(n.text)}${tags}${meta}${toggle}`;
+      const hideDone = !!(Store.data.ui && Store.data.ui.hideDoneChecks);
+      div.innerHTML = `${pinBadge}${imgs}${renderMarkdown(n.text, hideDone)}${tags}${meta}${toggle}`;
 
       // Seta ▾ → popover
       div.querySelector('.msg-toggle').addEventListener('click', (e) => { e.stopPropagation(); this.openMsgPopover(div, n); });
@@ -1754,6 +1767,18 @@
       if (i < index) return; // índice inválido
       n.text = newLines.join('\n'); n.editedAt = now(); n.rev = (n.rev || 0) + 1; Store.save();
       Sync.send('note:edit', { threadId: this.activeThread, clientId, text: n.text, edited: !!n.edited, editedAt: n.editedAt, rev: n.rev });
+      const hideDone = !!(Store.data.ui && Store.data.ui.hideDoneChecks);
+      if (hideDone && checked) {
+        // fade out suave do item marcado antes de reorganizar
+        const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
+        const label = el && el.querySelector(`.md-check input[data-chk="${index}"]`);
+        if (label) {
+          const wrap = label.closest('.md-check');
+          wrap.classList.add('chk-out');
+          setTimeout(() => this._replaceBubble(clientId, n), 260);
+          return;
+        }
+      }
       this._replaceBubble(clientId, n);
     },
 

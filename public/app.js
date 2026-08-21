@@ -336,10 +336,11 @@
     send(type, payload) { if (this.ws && this.connected && this.ws.readyState === 1) { this.lastSync = Date.now(); this.ws.send(JSON.stringify({ type, payload })); } },
     _lastStatus: null, _lastStatusAt: 0,
     setStatus(s) {
-      const now = Date.now();
-      // debounce: evita frenesi ao iniciar (máx 1 troca a cada 400ms, exceto offline)
-      if (s !== 'offline' && this._lastStatus && now - this._lastStatusAt < 400 && s !== this._lastStatus) return;
       if (s === this._lastStatus) return;
+      const now = Date.now();
+      // debounce só para 'connecting' (evita frenesi); online/offline sempre aplicam
+      // (antes: 'online' era engolido se chegasse <400ms após 'connecting' → dot preso no laranja)
+      if (s === 'connecting' && this._lastStatus && now - this._lastStatusAt < 400) return;
       this._lastStatus = s; this._lastStatusAt = now;
       const el = $('#sync-status'); if (!el) return;
       el.className = 'sync-status ' + s;
@@ -393,11 +394,6 @@
         // snapshot só se online (evita 504 offline em loop)
         if (navigator.onLine !== false) await this.loadSnapshot();
         if (this.connected) this.subscribe();
-        setTimeout(async () => {
-          if (this.channel && this.channel.state !== 'joined' && this.channel.state !== 'subscribed') {
-            console.warn('[supabase] channel not joined', this.channel.state);
-          }
-        }, 2000);
       } catch (e) { clearTimeout(t); this._connecting = false; console.warn('[supabase] connect fail', e); this.setStatus('offline'); }
     },
     async loadSnapshot() {
@@ -416,9 +412,9 @@
     },
     subscribe() {
       if (this.channel) try { this.supa.removeChannel(this.channel); } catch {}
-      // filtra por user_id para não receber notas de outros usuários (economiza CPU/rede no Brave)
-      this.supa.auth.getUser().then(({ data: { user } }) => {
-        const uid = user ? user.id : null;
+      // usa sessão local (sem rede); filtra por user_id
+      this.supa.auth.getSession().then(({ data: { session } }) => {
+        const uid = session && session.user ? session.user.id : null;
         const filt = uid ? `user_id=eq.${uid}` : undefined;
         const ch = this.supa.channel('notethread')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'notes', ...(filt?{filter:filt}:{}) }, (p) => {
@@ -462,8 +458,8 @@
         } else if (type === 'note:tags') {
           await this.supa.from('notes').update({ tags: payload.tags }).eq('client_id', payload.clientId);
         } else if (type === 'note:pin') {
-          const th = Store.getThread(payload.threadId); if (!th) return;
-          const cur = th.pinnedId === payload.clientId ? null : payload.clientId;
+          // usa estado explícito do payload (não recomputa — Store local já foi flipado)
+          const cur = payload.pinned ? payload.clientId : null;
           await this.supa.from('threads').update({ pinned_id: cur }).eq('id', payload.threadId);
         } else if (type === 'thread:move') {
           await this.supa.from('threads').update({ folder_id: payload.folderId || null }).eq('id', payload.threadId);
@@ -518,16 +514,18 @@
       // persistência de login: restaura sessão Supabase antes do primeiro render
       if (USE_SUPABASE) {
         try {
-          const supa = await this._ensureSupa();
+          // timeout 3s: se esm.sh/Supabase não responder, renderiza offline mesmo assim
+          const supa = await Promise.race([
+            this._ensureSupa(),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))
+          ]);
           if (supa) {
             const { data: { session } } = await supa.auth.getSession();
             if (session && session.user) {
               Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
-            } else if (Store.user && Store.user.provider === 'supabase' && !session) {
-              // sessão expirou, mantém offline-first mas marca como offline
             }
           }
-        } catch (e) { /* offline, mantém Store.user local */ }
+        } catch (e) { /* offline/timeout, mantém Store.user local */ }
       }
       this.renderAuthOrApp();
       // atualiza o rótulo de "última sincronização" a cada 15s
@@ -1752,7 +1750,8 @@
     togglePin(clientId) {
       const th = Store.getThread(this.activeThread); if (!th) return;
       const newPin = Store.setPinned(this.activeThread, clientId);
-      Sync.send('note:pin', { threadId: this.activeThread, clientId });
+      // envia estado EXPLÍCITO (evita recomputar errado após flip local)
+      Sync.send('note:pin', { threadId: this.activeThread, clientId, pinned: newPin != null });
       // re-render mensagens (para atualizar borda dourada + badge) + header
       this.renderedClientIds = new Set();
       this.renderMessages(true);
@@ -2134,13 +2133,15 @@
     appendNoteRealtime(n) {
       const box = $('#messages');
       $('#empty-state').classList.add('hidden');
+      // echo guard: se a bolha já está no DOM (enviada por ESTE dispositivo), não duplica
+      const existing = box.querySelector(`.bubble[data-client-id="${n.clientId}"]`);
+      if (existing) { existing.classList.remove('pending'); return; }
       const el = this.bubbleEl(n);
       el.classList.add('just-sent');
       box.appendChild(el);
       box.scrollTop = box.scrollHeight;
       const meta = el.querySelector('.meta'); if (meta) meta.textContent = fmtTime(n.ts);
       el.classList.remove('pending');
-      // remove a classe após a animação pop-in para não reanimar em re-renders
       setTimeout(() => el.classList.remove('just-sent'), 320);
     },
 
@@ -2242,9 +2243,10 @@
       });
       Sync.on('note:delete', ({ threadId, clientId }) => { Store.deleteNote(threadId, clientId); const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`); if (el) el.remove(); this.renderedClientIds.delete(clientId); if (this.activeThread === threadId) this.updatePinButton(); });
       Sync.on('thread:upsert', (t) => {
+        const isNew = !Store.data.threads[t.id];
         Store.upsertThread(t); this.queueRenderTree();
         if (this.activeThread === t.id) this.updatePinButton();
-        this.toast(`Nova conversa: "${t.name}"`);
+        if (isNew) this.toast(`Nova conversa: "${t.name}"`);
       });
       Sync.on('thread:delete', ({ id }) => { delete Store.data.threads[id]; delete Store.data.notes[id]; Store.save(); this.queueRenderTree(); });
       Sync.on('folder:upsert', (f) => { Store.upsertFolder(f); this.queueRenderTree(); });

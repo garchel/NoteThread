@@ -459,6 +459,21 @@ body {
 .bubble .msg-toggle:hover::before { opacity: 1; }
 .bubble .msg-toggle > * { position: relative; z-index: 1; }
 
+/* Pull-to-refresh indicador no topo das mensagens */
+.pull-indicator {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  height: 36px; margin: -6px 0 6px; font-size: 13px; font-weight: 600;
+  color: var(--text-dim); opacity: 0; transition: opacity .18s;
+}
+.pull-indicator.hidden { display: none; }
+.pull-indicator.ready .pull-text { color: var(--accent); }
+.pull-spinner {
+  width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; transition: transform .08s;
+}
+.pull-spinner.spinning { animation: pullSpin .7s linear infinite; }
+@keyframes pullSpin { to { transform: rotate(360deg); } }
+
 .bubble .pin-badge {
   position: absolute; top: -8px; left: -8px; background: var(--gold); color: #fff;
   width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;

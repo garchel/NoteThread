@@ -89,19 +89,89 @@ bindComposer() {
       this.setupInfiniteScroll();
     },
 
-_initPullToRefresh() {
+    _initPullToRefresh() {
       const box = $('#messages'); if (!box) return;
-      let startY = 0, pulling = false;
-      box.addEventListener('touchstart', (e) => { if (box.scrollTop <= 2) startY = e.touches[0].clientY; }, { passive: true });
-      box.addEventListener('touchmove', (e) => {
-        if (!startY) return;
-        const dy = e.touches[0].clientY - startY;
-        if (dy > 70 && box.scrollTop <= 2) { pulling = true; box.style.transform = `translateY(${Math.min(36, (dy-70)/2.5)}px)`; box.style.transition = 'none'; }
+      // cria indicador visual (ícone + texto) no topo do container
+      let indicator = document.getElementById('pull-indicator');
+      if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'pull-indicator';
+        indicator.className = 'pull-indicator hidden';
+        indicator.innerHTML = '<div class="pull-spinner"></div><span class="pull-text">Puxe para atualizar</span>';
+        box.prepend(indicator);
+      }
+      const spinner = indicator.querySelector('.pull-spinner');
+      const text = indicator.querySelector('.pull-text');
+      let startY = 0, pulling = false, threshold = 75, triggered = false;
+
+      const reset = () => {
+        box.style.transform = '';
+        box.style.transition = 'transform .25s ease';
+        indicator.classList.add('hidden');
+        indicator.style.opacity = '0';
+        if (spinner) spinner.style.transform = 'rotate(0deg)';
+        startY = 0; pulling = false; triggered = false;
+        if (text) text.textContent = 'Puxe para atualizar';
+      };
+
+      box.addEventListener('touchstart', (e) => {
+        if (box.scrollTop <= 2) startY = e.touches[0].clientY;
       }, { passive: true });
-      const reset = () => { box.style.transform = ''; box.style.transition = 'transform .2s ease'; startY = 0; };
+
+      box.addEventListener('touchmove', (e) => {
+        if (!startY || box.scrollTop > 2) return;
+        const dy = e.touches[0].clientY - startY;
+        if (dy <= 10) return;
+        // impede scroll nativo quando puxando no topo
+        if (dy > 20) e.preventDefault();
+        const pull = Math.min(80, Math.max(0, dy - 10));
+        pulling = pull > 20;
+        triggered = pull >= threshold;
+        box.style.transform = `translateY(${pull / 2.2}px)`;
+        box.style.transition = 'none';
+        indicator.classList.remove('hidden');
+        indicator.style.opacity = Math.min(1, pull / 50).toString();
+        if (spinner) spinner.style.transform = `rotate(${pull * 4}deg)`;
+        if (text) {
+          text.textContent = triggered ? 'Solte para atualizar' : 'Puxe para atualizar';
+          text.style.fontWeight = triggered ? '700' : '600';
+          text.style.color = triggered ? 'var(--accent)' : 'var(--text-dim)';
+        }
+        if (triggered) indicator.classList.add('ready');
+        else indicator.classList.remove('ready');
+      }, { passive: false });
+
+      const doRefresh = async () => {
+        if (text) text.textContent = 'Atualizando…';
+        if (spinner) spinner.classList.add('spinning');
+        // tenta refresh suave via Supabase antes de recarregar a página
+        try {
+          if (Sync && Sync.connected && Sync.loadSnapshot) {
+            await Sync.loadSnapshot();
+            this.renderTree();
+            if (this.activeThread) this.renderMessages(true);
+            this.toast('Atualizado', { kind: 'success' });
+          } else {
+            location.reload();
+            return;
+          }
+        } catch {
+          location.reload();
+          return;
+        } finally {
+          if (spinner) spinner.classList.remove('spinning');
+        }
+        reset();
+      };
+
       box.addEventListener('touchend', () => {
-        if (pulling) { pulling = false; reset(); this.toast('Atualizando…', { kind: 'info' }); setTimeout(() => location.reload(), 300); return; }
-        reset(); pulling = false;
+        if (triggered) {
+          box.style.transform = 'translateY(18px)';
+          box.style.transition = 'transform .2s ease';
+          doRefresh();
+        } else {
+          reset();
+        }
       }, { passive: true });
       box.addEventListener('touchcancel', reset, { passive: true });
     },

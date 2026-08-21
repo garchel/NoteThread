@@ -79,22 +79,63 @@
   const wrapSvg = (svg, size) => `<span class="svg-ic" style="width:${size || 16}px;height:${size || 16}px;display:inline-block">${svg}</span>`;
 
   // ===================================================================
-  // CATÁLOGO DE EMOJIS por categoria (threads/pastas)
+  // CATÁLOGO DE EMOJIS por categoria (threads/pastas) — [emoji, nome]
   // ===================================================================
   const EMOJI_CATS = [
-    { id: 'pop', label: 'Populares', emojis: ['💬','💡','📝','📌','⭐','🔥','🎯','✅','🗒️','📔','🧠','❤️','🎨','🌱','⚡','🔔'] },
-    { id: 'saude', label: 'Saúde', emojis: ['💊','🩺','🏥','🚑','💉','🩹','🦷','👁️','🫀','🦴','🧬','👩‍⚕️','👨‍⚕️','🧘','🏋️','🥗','🚭','⚕️'] },
-    { id: 'trab', label: 'Trabalho', emojis: ['💼','🖥️','📊','📈','📉','🧾','📎','🗂️','📄','🖊️','💵','💰','💳','🤝','📧','⏰','📁','📂'] },
-    { id: 'escola', label: 'Escola & Estudos', emojis: ['🎓','🏫','📚','📖','✏️','📐','🔬','🔭','🧮','🔢','🌍','🚌','🧪','📝','🎒','🏅'] },
-    { id: 'fam', label: 'Casa & Família', emojis: ['🏡','🔑','🛏️','🛁','🍳','🧹','🧺','🪴','🔧','🛠️','👶','🧒','🐶','🐱','👨‍👩‍👧‍👦','💝','🎂','🎁'] },
-    { id: 'viagem', label: 'Viagens & Lazer', emojis: ['✈️','🚗','🚆','🛳️','🧳','🗺️','🏖️','🏔️','🏕️','🌴','🎡','🎟️','📸','🚲','🗽','🧭'] },
-    { id: 'ent', label: 'Séries, Filmes & Jogos', emojis: ['🎬','📺','🍿','🎮','🕹️','🎵','🎧','🎤','🎸','🎭','🎪','🃏','🎲','🎰','📚','🎤'] },
-    { id: 'anime', label: 'Animes & HQs', emojis: ['🍥','⚔️','🐉','🥷','👻','🦸','🦹','🧙','🧝','🚀','👾','💥','🌀','🎴','📕','✨'] },
-    { id: 'comida', label: 'Comida & Bebidas', emojis: ['🍕','🍔','🌮','🍣','🍜','🍎','🥑','🍰','🍞','☕','🍺','🍷','🧁','🍫','🥤','🛒'] },
-    { id: 'esporte', label: 'Esportes', emojis: ['⚽','🏀','🎾','🏐','🏈','🏓','⛳','🚴','🏊','🥋','🤸','🏆','🥇','🎽','⛸️','🎿'] },
-    { id: 'financas', label: 'Finanças', emojis: ['💰','💸','💳','🏦','📈','📉','🧾','🪙','💎','🤑','📋','🗓️'] },
-    { id: 'natureza', label: 'Natureza & Clima', emojis: ['🌻','🌳','🌸','🌊','☀️','🌙','⛅','🌈','🐢','🦋','🐝','🌵','🍀','🐾','🍄','❄️'] },
-    { id: 'simbolos', label: 'Símbolos & Objetos', emojis: ['🔒','⚙️','♻️','🆘','📅','📦','🏷️','🧩','🔍','🗑️','📱','💻','🌐','🔗','🚨','♾️'] },
+    { id: 'pop', label: 'Populares', emojis: [
+      ['💬','conversa'],['💡','ideia'],['📝','nota'],['📌','fixar'],['⭐','favorito'],['🔥','urgente'],
+      ['🎯','meta'],['✅','tarefa'],['🗒️','lembrete'],['📔','diário'],['🧠','estudo'],['❤️','importante'],
+      ['🎨','arte'],['🌱','novo'],['⚡','energia'],['🔔','alerta']] },
+    { id: 'saude', label: 'Saúde', emojis: [
+      ['💊','remédio'],['🩺','médico'],['🏥','hospital'],['🚑','ambulância'],['💉','vacina'],['🩹','curativo'],
+      ['🦷','dentista'],['👁️','olhos'],['🫀','coração'],['🦴','ortopedia'],['🧬','exame'],['👩‍⚕️','doutora'],
+      ['👨‍⚕️','doutor'],['🧘','meditação'],['🏋️','academia'],['🥗','dieta'],['🚭','parar de fumar'],['⚕️','clínica'],
+      ['🤒','doente'],['🧴','tratamento']] },
+    { id: 'trab', label: 'Trabalho', emojis: [
+      ['💼','emprego'],['🖥️','computador'],['📊','relatório'],['📈','crescimento'],['📉','queda'],['🧾','recibo'],
+      ['📎','anexo'],['🗂️','arquivos'],['📄','documento'],['🖊️','assinatura'],['💵','pagamento'],['💰','dinheiro'],
+      ['💳','cartão'],['🤝','reunião'],['📧','email'],['⏰','prazo'],['📁','pasta'],['📂','projetos'],
+      ['👔','cliente'],['🪪','crachá']] },
+    { id: 'escola', label: 'Escola & Estudos', emojis: [
+      ['🎓','formatura'],['🏫','escola'],['📚','livros'],['📖','leitura'],['✏️','lição'],['📐','matemática'],
+      ['🔬','ciência'],['🔭','pesquisa'],['🧮','contas'],['🔢','números'],['🌍','geografia'],['🚌','ônibus escolar'],
+      ['🧪','química'],['🎒','mochila'],['🏅','nota boa'],['📜','certificado']] },
+    { id: 'fam', label: 'Casa & Família', emojis: [
+      ['🏡','casa'],['🔑','chaves'],['🛏️','cama'],['🛁','banho'],['🍳','cozinha'],['🧹','limpeza'],
+      ['🧺','roupas'],['🪴','plantas'],['🔧','reparo'],['🛠️','ferramentas'],['👶','bebê'],['🧒','filhos'],
+      ['🐶','cachorro'],['🐱','gato'],['👨‍👩‍👧‍👦','família'],['💝','presente família'],['🎂','aniversário'],['🎁','presente'],
+      ['🛒','compras'],['💡','conta de luz']] },
+    { id: 'viagem', label: 'Viagens & Lazer', emojis: [
+      ['✈️','voo'],['🚗','carro'],['🚆','trem'],['🛳️','cruzeiro'],['🧳','malas'],['🗺️','roteiro'],
+      ['🏖️','praia'],['🏔️','montanha'],['🏕️','acampamento'],['🌴','férias'],['🎡','passeio'],['🎟️','ingresso'],
+      ['📸','fotos'],['🚲','bike'],['🗽','turismo'],['🧭','aventura'],['⛽','gasolina'],['🏨','hotel']] },
+    { id: 'ent', label: 'Séries, Filmes & Jogos', emojis: [
+      ['🎬','filme'],['📺','série'],['🍿','cinema'],['🎮','jogo'],['🕹️','videogame'],['🎵','música'],
+      ['🎧','podcast'],['🎤','show'],['🎸','violão'],['🎭','teatro'],['🎲','boardgame'],['🃏','cartas'],
+      ['🎰','aposta'],['📕','romance'],['🎪','festival'],['🎬','maratona']] },
+    { id: 'anime', label: 'Animes & HQs', emojis: [
+      ['🍥','anime'],['⚔️','batalha'],['🐉','dragão'],['🥷','ninja'],['👻','terror'],['🦸','herói'],
+      ['🦹','vilão'],['🧙','magia'],['🧝','fantasia'],['🚀','ficção'],['👾','retro'],['💥','ação'],
+      ['🌀','isekai'],['🎴','card game'],['📕','mangá'],['✨','épico']] },
+    { id: 'comida', label: 'Comida & Bebidas', emojis: [
+      ['🍕','pizza'],['🍔','hamburguer'],['🌮','mexicano'],['🍣','japonês'],['🍜','lámen'],['🍎','fruta'],
+      ['🥑','saudável'],['🍰','sobremesa'],['🍞','padaria'],['☕','café'],['🍺','bar'],['🍷','vinho'],
+      ['🧁','doce'],['🍫','chocolate'],['🥤','bebida'],['🛍️','mercado']] },
+    { id: 'esporte', label: 'Esportes', emojis: [
+      ['⚽','futebol'],['🏀','basquete'],['🎾','tênis'],['🏐','vôlei'],['🏈','foot americano'],['🏓','ping pong'],
+      ['⛳','golfe'],['🚴','pedalada'],['🏊','natação'],['🥋','luta'],['🤸','exercício'],['🏆','campeonato'],
+      ['🥇','vitória'],['🎽','corrida'],['⛸️','patinação'],['🎿','esqui']] },
+    { id: 'financas', label: 'Finanças', emojis: [
+      ['💰','economia'],['💸','gasto'],['💳','fatura'],['🏦','banco'],['📈','investimento'],['📉','perda'],
+      ['🧾','boleto'],['🪙','moedas'],['💎','reserva'],['📋','orçamento'],['🗓️','vencimento'],['🤑','lucro']] },
+    { id: 'natureza', label: 'Natureza & Clima', emojis: [
+      ['🌻','jardim'],['🌳','árvore'],['🌸','flores'],['🌊','mar'],['☀️','verão'],['🌙','noite'],
+      ['⛅','tempo'],['🌈','chuva passou'],['🐢','pet lento'],['🦋','borboletas'],['🐝','abelhas'],['🌵','deserto'],
+      ['🍀','sorte'],['🐾','animais'],['🍄','trilha'],['❄️','inverno']] },
+    { id: 'simbolos', label: 'Símbolos & Objetos', emojis: [
+      ['🔒','privado'],['⚙️','config'],['♻️','rotina'],['🆘','emergência'],['📅','data'],['📦','encomenda'],
+      ['🏷️','etiqueta'],['🧩','misc'],['🔍','pesquisar'],['🗑️','lixo'],['📱','celular'],['💻','notebook'],
+      ['🌐','internet'],['🔗','link'],['🚨','importante agora'],['♾️','recorrente']] },
   ];
 
   // Renderiza markdown básico e SEGURO (escapa HTML primeiro, depois aplica).
@@ -1149,16 +1190,35 @@
 
     // ---------- Seletor de emojis (componente compartilhado) ----------
     _pickerHTML(prefix, defEmoji) {
-      const cats = EMOJI_CATS.map((c) => `
-        <div class="ep-section" data-cat="${c.id}">
+      const sec = (c) => `
+        <div class="ep-section" data-cat="${c.id}" data-label="${c.label.toLowerCase()}">
           <div class="ep-head">${c.label}</div>
-          <div class="emoji-grid">${c.emojis.map((e) => `<button type="button" class="emoji-opt${e === defEmoji ? ' sel' : ''}" data-emoji="${e}">${e}</button>`).join('')}</div>
-        </div>`).join('');
+          <div class="emoji-grid">${c.emojis.map(([e, n]) => `<button type="button" class="emoji-opt${e === defEmoji ? ' sel' : ''}" data-emoji="${e}" title="${n}">${e}</button>`).join('')}</div>
+        </div>`;
       const chips = EMOJI_CATS.map((c) => `<button type="button" class="ep-chip" data-goto="${c.id}">${c.label}</button>`).join('');
       return `
-        <input id="${prefix}-search" class="ep-search" type="text" placeholder="Filtrar categorias… (ex: saúde, viagem)" autocomplete="off" />
+        <input id="${prefix}-search" class="ep-search" type="text" placeholder="Buscar emoji… (ex: remédio, futebol, série)" autocomplete="off" />
         <div class="ep-cats">${chips}</div>
-        <div id="${prefix}-scroll" class="ep-scroll">${cats}</div>`;
+        <div id="${prefix}-scroll" class="ep-scroll">${EMOJI_CATS.map(sec).join('')}</div>`;
+    },
+    _filterEmojis(scroll, q) {
+      const query = q.trim().toLowerCase();
+      // mapa emoji → nome (achatado do catálogo)
+      if (!this._emojiNames) {
+        this._emojiNames = {};
+        EMOJI_CATS.forEach((c) => c.emojis.forEach(([e, n]) => { this._emojiNames[e] = n; }));
+      }
+      scroll.querySelectorAll('.ep-section').forEach((sec) => {
+        const catLabel = sec.dataset.label || '';
+        let anyVisible = false;
+        sec.querySelectorAll('.emoji-opt').forEach((b) => {
+          const name = this._emojiNames[b.dataset.emoji] || '';
+          const match = !query || name.includes(query) || catLabel.includes(query);
+          b.classList.toggle('hidden', !match);
+          if (match) anyVisible = true;
+        });
+        sec.classList.toggle('hidden', !anyVisible);
+      });
     },
     _bindPicker(prefix, getDefaultSel, onPick) {
       const scroll = $(`#${prefix}-scroll`);
@@ -1173,24 +1233,46 @@
       if (!initial) onPick(getDefaultSel);
       scroll.querySelectorAll('.emoji-opt').forEach((b) => b.addEventListener('click', () => select(b)));
       // chips → rola até a categoria
-      document.querySelectorAll(`#${prefix}-scroll`).forEach(() => {});
       const pickerRoot = scroll.closest('.ep');
       if (pickerRoot) pickerRoot.querySelectorAll('.ep-chip').forEach((ch) => ch.addEventListener('click', () => {
         search.value = '';
-        scroll.querySelectorAll('.ep-section').forEach((s) => s.classList.remove('hidden'));
+        this._filterEmojis(scroll, '');
         const sec = scroll.querySelector(`.ep-section[data-cat="${ch.dataset.goto}"]`);
         if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }));
-      // busca filtra seções
-      if (search) search.addEventListener('input', () => {
-        const q = search.value.trim().toLowerCase();
-        scroll.querySelectorAll('.ep-section').forEach((s) => {
-          const cat = EMOJI_CATS.find((c) => c.id === s.dataset.cat);
-          s.classList.toggle('hidden', !!(q && cat && !cat.label.toLowerCase().includes(q)));
+      // busca por nome do emoji + categoria
+      if (search) search.addEventListener('input', () => this._filterEmojis(scroll, search.value));
+      // drag-to-scroll + wheel horizontal na barra de categorias
+      const catsBar = pickerRoot && pickerRoot.querySelector('.ep-cats');
+      if (catsBar) {
+        let down = false, startX = 0, startLeft = 0, moved = false;
+        catsBar.addEventListener('mousedown', (e) => { down = true; moved = false; startX = e.pageX; startLeft = catsBar.scrollLeft; catsBar.classList.add('dragging'); });
+        window.addEventListener('mousemove', (e) => {
+          if (!down) return;
+          const dx = e.pageX - startX;
+          if (Math.abs(dx) > 4) moved = true;
+          catsBar.scrollLeft = startLeft - dx;
         });
-        const first = Array.from(scroll.querySelectorAll('.ep-section')).find((s) => !s.classList.contains('hidden'));
-        if (first && q) first.scrollIntoView({ block: 'start' });
-      });
+        window.addEventListener('mouseup', () => {
+          if (!down) return;
+          down = false; catsBar.classList.remove('dragging');
+          // se arrastou, suprime o clique no chip logo solto
+          if (moved) catsBar.dataset.suppressClick = '1';
+          setTimeout(() => { catsBar.dataset.suppressClick = ''; }, 0);
+        });
+        catsBar.addEventListener('click', (e) => {
+          if (catsBar.dataset.suppressClick === '1') { e.stopPropagation(); e.preventDefault(); }
+        }, true);
+        // wheel vertical rola a barra na horizontal quando o mouse está sobre ela
+        catsBar.addEventListener('wheel', (e) => {
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            const max = catsBar.scrollWidth - catsBar.clientWidth;
+            const atStart = catsBar.scrollLeft <= 0 && e.deltaY < 0;
+            const atEnd = catsBar.scrollLeft >= max && e.deltaY > 0;
+            if (!atStart && !atEnd) { e.preventDefault(); catsBar.scrollLeft += e.deltaY; }
+          }
+        }, { passive: false });
+      }
     },
 
     createThread() {

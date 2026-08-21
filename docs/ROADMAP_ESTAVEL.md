@@ -125,7 +125,7 @@
 
 | # | Task | Detalhe | Aceite |
 |---|------|---------|--------|
-| R6.7 | **Imagens em Storage** | `base64` no Postgres/localStorage vai estourar a cota free (500MB) rápido e incha o snapshot. Supabase Storage (bucket privado + URL assinada) na nota resolve e acelera o carregamento | Upload → Storage; snapshot não carrega bytes de imagem |
+| R6.7 | ✅ **Imagens em Storage** | Implementado `8a2ce32`: bucket `note-images` (public, RLS) + upload `5MB` via `supabase.storage` em `composer.js`, fallback `base64` offline. Snapshot não carrega bytes | ✅ Storage com fallback |
 | R6.8 | **Paginação real no servidor** | `limit(200)` no snapshot é paliativo; usar `.range()` com scroll infinito consultando o banco por página (notas antigas sob demanda) | Thread com 5k notas abre igualmente rápida |
 | R6.9 | **PWA update UX** | Auto-reload do SW resolve o bundle travado; um "What's new" no toast de update daria polimento (changelog curto por versão em `sw.js` ou JSON) | Toast mostra 1-2 linhas de novidades antes de recarregar |
 

@@ -326,13 +326,17 @@
     },
     scheduleReconnect() { if (this.reconnectTimer) return; this.reconnectTimer = setTimeout(() => { this.reconnectTimer = null; this.connect(); }, 2500); },
     send(type, payload) { if (this.ws && this.connected && this.ws.readyState === 1) { this.lastSync = Date.now(); this.ws.send(JSON.stringify({ type, payload })); } },
+    _lastStatus: null, _lastStatusAt: 0,
     setStatus(s) {
+      const now = Date.now();
+      // debounce: evita frenesi ao iniciar (máx 1 troca a cada 400ms, exceto offline)
+      if (s !== 'offline' && this._lastStatus && now - this._lastStatusAt < 400 && s !== this._lastStatus) return;
+      if (s === this._lastStatus) return;
+      this._lastStatus = s; this._lastStatusAt = now;
       const el = $('#sync-status'); if (!el) return;
       el.className = 'sync-status ' + s;
       el.dataset.state = s;
       el.dataset.status = s === 'online' ? 'Sincronizado' : s === 'connecting' ? 'Conectando…' : 'Offline — suas notas ficam salvas neste dispositivo';
-      // garante que o conteúdo do botão seja apenas o ícone: remove qualquer
-      // texto residual que possa ter ficado de versões antigas do app/cache.
       while (el.firstChild) el.removeChild(el.firstChild);
       const NS = 'http://www.w3.org/2000/svg';
       const svg = document.createElementNS(NS, 'svg');
@@ -355,11 +359,14 @@
     supa: null, channel: null, handlers: {}, lastSync: 0, connected: false,
     on(type, fn) { this.handlers[type] = fn; },
     emit(type, payload) { this.lastSync = Date.now(); if (this.handlers[type]) this.handlers[type](payload); },
+    _connecting: false,
     setStatus(s) { return WSSync.setStatus.call(this, s); },
     async connect() {
+      if (this._connecting) return;
+      this._connecting = true;
       this.setStatus('connecting');
-      if (!USE_SUPABASE) return WSSync.connect.call(this);
-      const t = setTimeout(() => { if (!this.connected) { this.setStatus('offline'); console.warn('[supabase] connect timeout'); } }, 8000);
+      if (!USE_SUPABASE) { this._connecting = false; return WSSync.connect.call(this); }
+      const t = setTimeout(() => { if (!this.connected) { this.setStatus('offline'); console.warn('[supabase] connect timeout'); } this._connecting = false; }, 8000);
       try {
         const m = await import('https://esm.sh/@supabase/supabase-js@2');
         this.supa = m.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -373,16 +380,15 @@
         if (session && session.user) {
           Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
         }
-        this.connected = true; this.setStatus('online'); clearTimeout(t);
+        this.connected = true; this.setStatus('online'); clearTimeout(t); this._connecting = false;
         await this.loadSnapshot();
         this.subscribe();
-        // verifica subscrição após 2s
         setTimeout(async () => {
           if (this.channel && this.channel.state !== 'joined' && this.channel.state !== 'subscribed') {
             console.warn('[supabase] channel not joined', this.channel.state);
           }
         }, 2000);
-      } catch (e) { clearTimeout(t); console.warn('[supabase] connect fail', e); this.setStatus('offline'); }
+      } catch (e) { clearTimeout(t); this._connecting = false; console.warn('[supabase] connect fail', e); this.setStatus('offline'); }
     },
     async loadSnapshot() {
       const [th, fo, no] = await Promise.all([
@@ -463,7 +469,7 @@
     pendingImages: [],
     dom: {},
 
-    init() {
+    async init() {
       this.dom = {
         tree: $('#tree'), favSection: $('#fav-section'), favList: $('#fav-list'),
         ctx: $('#ctx-menu'), modal: $('#modal'), modalTitle: $('#modal-title'),
@@ -492,6 +498,20 @@
       this.bindSearch();
       this.bindShortcuts();
       this.bindSwipe();
+      // persistência de login: restaura sessão Supabase antes do primeiro render
+      if (USE_SUPABASE) {
+        try {
+          const supa = await this._ensureSupa();
+          if (supa) {
+            const { data: { session } } = await supa.auth.getSession();
+            if (session && session.user) {
+              Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
+            } else if (Store.user && Store.user.provider === 'supabase' && !session) {
+              // sessão expirou, mantém offline-first mas marca como offline
+            }
+          }
+        } catch (e) { /* offline, mantém Store.user local */ }
+      }
       this.renderAuthOrApp();
       // atualiza o rótulo de "última sincronização" a cada 15s
       setInterval(() => this.updateSyncLabel(), 15000);

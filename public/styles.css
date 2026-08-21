@@ -723,11 +723,11 @@ button:focus { outline: none; }
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--accent); color: #fff; border: none; border-radius: 10px;
   padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer;
-  box-shadow: var(--shadow-sm); transition: filter .15s, box-shadow .15s;
-  will-change: filter;
+  box-shadow: var(--shadow-sm); transition: background .15s, box-shadow .15s;
+  transform: translateZ(0); backface-visibility: hidden;
 }
-.tree-empty .te-btn:hover { filter: brightness(1.06); box-shadow: var(--shadow-md); transform: none; }
-.tree-empty .te-btn:active { filter: brightness(0.98); transform: scale(0.99); }
+.tree-empty .te-btn:hover { background: #6e4df0; box-shadow: var(--shadow-md); filter: none; }
+.tree-empty .te-btn:active { background: #5f3ee6; transform: translateZ(0) scale(0.98); }
 
 /* Contador de notas ao lado do nome da thread */
 .tnode .note-count {

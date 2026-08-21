@@ -391,10 +391,11 @@
       } catch (e) { clearTimeout(t); this._connecting = false; console.warn('[supabase] connect fail', e); this.setStatus('offline'); }
     },
     async loadSnapshot() {
+      // paginado: só últimas 200 notas para não pesar Brave (base64) — infinite scroll carrega resto sob demanda
       const [th, fo, no] = await Promise.all([
-        this.supa.from('threads').select('*'),
-        this.supa.from('folders').select('*'),
-        this.supa.from('notes').select('*')
+        this.supa.from('threads').select('*').order('updated_at', { ascending: false }).limit(100),
+        this.supa.from('folders').select('*').limit(100),
+        this.supa.from('notes').select('*').order('ts', { ascending: false }).limit(200)
       ]);
       const payload = {
         threads: Object.fromEntries((th.data || []).map(t => [t.id, { id: t.id, name: t.name, emoji: t.emoji, folderId: t.folder_id, favorite: t.favorite, pinnedId: t.pinned_id, createdAt: new Date(t.created_at).getTime(), updatedAt: new Date(t.updated_at).getTime(), lastPreview: t.last_preview }])),
@@ -405,23 +406,29 @@
     },
     subscribe() {
       if (this.channel) try { this.supa.removeChannel(this.channel); } catch {}
-      this.channel = this.supa.channel('notethread')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (p) => {
-          const r = p.new || p.old; if (!r) return;
-          if (p.eventType === 'DELETE') this.emit('note:delete', { threadId: r.thread_id, clientId: r.client_id });
-          else this.emit('note:upsert', { clientId: r.client_id, threadId: r.thread_id, text: r.text, images: r.images || [], tags: r.tags || [], ts: Number(r.ts), sortOrder: r.sort_order, edited: r.edited, editedAt: r.edited_at, rev: r.rev });
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' }, (p) => {
-          const r = p.new || p.old; if (!r) return;
-          if (p.eventType === 'DELETE') this.emit('thread:delete', { id: r.id });
-          else this.emit('thread:upsert', { id: r.id, name: r.name, emoji: r.emoji, folderId: r.folder_id, favorite: r.favorite, pinnedId: r.pinned_id, createdAt: new Date(r.created_at).getTime(), updatedAt: new Date(r.updated_at).getTime(), lastPreview: r.last_preview });
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'folders' }, (p) => {
-          const r = p.new || p.old; if (!r) return;
-          if (p.eventType === 'DELETE') this.emit('folder:delete', { id: r.id });
-          else this.emit('folder:upsert', { id: r.id, name: r.name, emoji: r.emoji, parentId: r.parent_id, createdAt: new Date(r.created_at).getTime() });
-        })
-        .subscribe();
+      // filtra por user_id para não receber notas de outros usuários (economiza CPU/rede no Brave)
+      this.supa.auth.getUser().then(({ data: { user } }) => {
+        const uid = user ? user.id : null;
+        const filt = uid ? `user_id=eq.${uid}` : undefined;
+        const ch = this.supa.channel('notethread')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'notes', ...(filt?{filter:filt}:{}) }, (p) => {
+            const r = p.new || p.old; if (!r) return;
+            if (p.eventType === 'DELETE') this.emit('note:delete', { threadId: r.thread_id, clientId: r.client_id });
+            else this.emit('note:upsert', { clientId: r.client_id, threadId: r.thread_id, text: r.text, images: (r.images||[]).slice(0,2), tags: r.tags || [], ts: Number(r.ts), sortOrder: r.sort_order, edited: r.edited, editedAt: r.edited_at, rev: r.rev });
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', ...(filt?{filter:filt}:{}) }, (p) => {
+            const r = p.new || p.old; if (!r) return;
+            if (p.eventType === 'DELETE') this.emit('thread:delete', { id: r.id });
+            else this.emit('thread:upsert', { id: r.id, name: r.name, emoji: r.emoji, folderId: r.folder_id, favorite: r.favorite, pinnedId: r.pinned_id, createdAt: new Date(r.created_at).getTime(), updatedAt: new Date(r.updated_at).getTime(), lastPreview: r.last_preview });
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'folders', ...(filt?{filter:filt}:{}) }, (p) => {
+            const r = p.new || p.old; if (!r) return;
+            if (p.eventType === 'DELETE') this.emit('folder:delete', { id: r.id });
+            else this.emit('folder:upsert', { id: r.id, name: r.name, emoji: r.emoji, parentId: r.parent_id, createdAt: new Date(r.created_at).getTime() });
+          })
+          .subscribe();
+        this.channel = ch;
+      });
     },
     async send(type, payload) {
       if (!this.supa) return;
@@ -1135,6 +1142,8 @@
       else arr.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
       return arr;
     },
+    _rtTimer: null,
+    queueRenderTree() { clearTimeout(this._rtTimer); this._rtTimer = setTimeout(() => this.renderTree(), 90); },
     renderTree() {
       this.renderFavorites();
       const tree = this.dom.tree;
@@ -2217,18 +2226,17 @@
       });
       Sync.on('note:delete', ({ threadId, clientId }) => { Store.deleteNote(threadId, clientId); const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`); if (el) el.remove(); this.renderedClientIds.delete(clientId); if (this.activeThread === threadId) this.updatePinButton(); });
       Sync.on('thread:upsert', (t) => {
-        // o servidor já exclui o remetente; qualquer evento aqui é de outro dispositivo
-        Store.upsertThread(t); this.renderTree();
+        Store.upsertThread(t); this.queueRenderTree();
         if (this.activeThread === t.id) this.updatePinButton();
         this.toast(`Nova conversa: "${t.name}"`);
       });
-      Sync.on('thread:delete', ({ id }) => { delete Store.data.threads[id]; delete Store.data.notes[id]; Store.save(); this.renderTree(); });
-      Sync.on('folder:upsert', (f) => { Store.upsertFolder(f); this.renderTree(); });
-      Sync.on('folder:delete', ({ id }) => { Store.deleteFolder(id, false); this.renderTree(); });
+      Sync.on('thread:delete', ({ id }) => { delete Store.data.threads[id]; delete Store.data.notes[id]; Store.save(); this.queueRenderTree(); });
+      Sync.on('folder:upsert', (f) => { Store.upsertFolder(f); this.queueRenderTree(); });
+      Sync.on('folder:delete', ({ id }) => { Store.deleteFolder(id, false); this.queueRenderTree(); });
       Sync.on('thread:move', ({ threadId, folderId, beforeId }) => {
         Store.moveThread(threadId, folderId || null, beforeId || null);
         this.setManualSort();
-        this.renderTree();
+        this.queueRenderTree();
       });
     },
   };

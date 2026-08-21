@@ -12,6 +12,7 @@
   'use strict';
 
   const PAGE_SIZE = 25;
+  console.info('[NoteThread] app.js bundle v27 — checklist hideDone ativo');
 
   // ---------------------------------------------------------------------
   // CONFIGURAÇÃO DE SINCRONIZAÇÃO
@@ -1746,7 +1747,10 @@
       // Checkboxes clicáveis: marcar/desmarcar persiste no texto da nota
       div.querySelectorAll('.md-check input[type="checkbox"]').forEach((cb) => {
         cb.addEventListener('click', (e) => e.stopPropagation());
-        cb.addEventListener('change', () => this.toggleNoteCheckbox(clientId, +cb.dataset.chk, cb.checked));
+        cb.addEventListener('change', () => {
+          try { this.toggleNoteCheckbox(clientId, +cb.dataset.chk, cb.checked); }
+          catch (err) { console.error('[checklist] falha ao alternar:', err); }
+        });
       });
 
       return div;

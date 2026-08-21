@@ -71,10 +71,16 @@ create policy "own threads" on threads for all using (auth.uid() = user_id) with
 drop policy if exists "own notes" on notes;
 create policy "own notes" on notes for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- 3. Realtime (supabase realtime precisa publication)
-alter publication supabase_realtime add table threads;
-alter publication supabase_realtime add table notes;
-alter publication supabase_realtime add table folders;
+-- 3. Realtime (idempotente: ignora se a tabela já está na publicação)
+do $$ begin
+  alter publication supabase_realtime add table threads;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table notes;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table folders;
+exception when duplicate_object then null; end $$;
 
 -- 4. Índices
 create index if not exists notes_thread_ts on notes(thread_id, ts);

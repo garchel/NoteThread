@@ -380,7 +380,23 @@
     on(type, fn) { this.handlers[type] = fn; },
     emit(type, payload) { this.lastSync = Date.now(); if (this.handlers[type]) this.handlers[type](payload); },
     _connecting: false,
+    _uidCache: null,
     setStatus(s) { return WSSync.setStatus.call(this, s); },
+    // uid da sessão LOCAL (sem rede) — getUser() fazia request por evento e falhava silencioso
+    async _uid() {
+      if (!this.supa) return null;
+      if (this._uidCache) return this._uidCache;
+      const { data: { session } } = await this.supa.auth.getSession();
+      this._uidCache = session && session.user ? session.user.id : null;
+      return this._uidCache;
+    },
+    // grava linha na tabela profiles ao logar
+    async ensureProfile(user) {
+      if (!this.supa || !user) return;
+      try {
+        await this.supa.from('profiles').upsert({ id: user.id, email: user.email, name: (user.email || 'u').split('@')[0] });
+      } catch (e) { console.warn('[supabase] profile save fail', e); }
+    },
     async connect() {
       if (this._connecting || (this.connected && this.supa)) return;
       // offline: não tenta conectar repetidamente
@@ -392,14 +408,20 @@
       try {
         this.supa = await getSupa();
         const { data: { session } } = await this.supa.auth.getSession();
+        this._uidCache = session && session.user ? session.user.id : null;
         this.supa.auth.onAuthStateChange((_ev, sess) => {
           if (sess && sess.user) {
             Store.setUser({ name: sess.user.email.split('@')[0], mail: sess.user.email, provider: 'supabase', id: sess.user.id });
+            this._uidCache = sess.user.id;
+            this.ensureProfile(sess.user);
             if (UI && UI.renderMe) UI.renderMe();
+          } else {
+            this._uidCache = null;
           }
         });
         if (session && session.user) {
           Store.setUser({ name: session.user.email.split('@')[0], mail: session.user.email, provider: 'supabase', id: session.user.id });
+          this.ensureProfile(session.user);
         }
         this.connected = true; this.setStatus('online'); clearTimeout(t); this._connecting = false;
         // snapshot só se online (evita 504 offline em loop)
@@ -451,7 +473,7 @@
       if (!this.supa) return;
       this.lastSync = Date.now();
       try {
-        const uid = (await this.supa.auth.getUser()).data.user?.id; if (!uid) return;
+        const uid = await this._uid(); if (!uid) { console.warn('[supabase] send sem sessão:', type); return; }
         if (type === 'note:upsert') {
           const n = payload; await this.supa.from('notes').upsert({ client_id: n.clientId, thread_id: n.threadId, text: n.text, images: n.images || [], tags: n.tags || [], ts: n.ts, sort_order: n.sortOrder || 0, edited: !!n.edited, edited_at: n.editedAt || null, rev: n.rev || 0, user_id: uid }, { onConflict: 'client_id' });
         } else if (type === 'thread:upsert') {
@@ -475,7 +497,14 @@
         } else if (type === 'thread:move') {
           await this.supa.from('threads').update({ folder_id: payload.folderId || null }).eq('id', payload.threadId);
         }
-      } catch (e) { console.warn('[supabase] send fail', type, e); }
+      } catch (e) {
+        console.warn('[supabase] send fail', type, e);
+        // avisa o usuário 1× por sessão que algo não persistiu
+        if (!this._warnedFail && UI && UI.toast) {
+          this._warnedFail = true;
+          UI.toast('Falha ao sincronizar — suas notas ficam salvas localmente', { kind: 'error' });
+        }
+      }
     }
   };
 

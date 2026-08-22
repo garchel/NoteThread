@@ -44,6 +44,9 @@ async init() {
       this.bindThreadTitle();
       this.bindSync();
       this.bindContextMenu();
+      // Nav cozy
+      const navNew = $('#nav-new-note'); if (navNew) navNew.addEventListener('click', () => this.createThread());
+      const navSet = $('#nav-settings'); if (navSet) navSet.addEventListener('click', (e) => { e.stopPropagation(); this.toggleSettingsPopover(); });
       this.bindModal();
       this.bindMsgPopover();
       this.bindPinPopover();

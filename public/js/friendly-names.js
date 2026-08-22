@@ -19,7 +19,11 @@
   const showTooltip = (el) => {
     const name = el.getAttribute('data-friendly-name');
     if (!name || !tooltip) return;
-    tooltip.textContent = name;
+    // mostra nome + id/classe para referência precisa (estilo devtools)
+    const id = el.id ? `#${el.id}` : '';
+    const cls = el.className && typeof el.className === 'string' ? '.' + el.className.split(/\s+/).filter(c=>c && c!=='hidden').slice(0,2).join('.') : '';
+    const extra = id || cls ? ` <span style="opacity:.6;font-weight:400">${id}${cls}</span>` : '';
+    tooltip.innerHTML = `${name}${extra}`;
     tooltip.classList.remove('hidden');
     const rect = el.getBoundingClientRect();
     let top = rect.top - 28;
@@ -74,22 +78,50 @@
   document.addEventListener('mouseout', onMouseOut);
   document.addEventListener('mousemove', onMouseMove);
 
-  // Adiciona nomes para elementos dinâmicos (bolhas, cadernos)
+  // Adiciona nomes granulares para elementos dinâmicos (bolhas por tipo, cadernos, inputs)
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((m) => {
       m.addedNodes.forEach((n) => {
-        if (n.nodeType === 1) {
-          if (n.classList.contains('bubble') && !n.hasAttribute('data-friendly-name')) {
-            const isCheck = n.classList.contains('bubble-checklist');
-            const isIdea = n.classList.contains('bubble-idea');
-            n.setAttribute('data-friendly-name', isCheck ? 'Mensagem Checklist' : isIdea ? 'Mensagem Ideia' : n.classList.contains('remote') ? 'Mensagem Recebida' : 'Mensagem Enviada');
-          }
-          if (n.classList.contains('tnode') && !n.hasAttribute('data-friendly-name')) {
-            n.setAttribute('data-friendly-name', 'Caderno: ' + (n.querySelector('.label')?.textContent || 'sem nome'));
-          }
+        if (n.nodeType !== 1) return;
+        // Bolhas — por tipo de conteúdo
+        if (n.classList.contains('bubble') && !n.hasAttribute('data-friendly-name')) {
+          const isCheck = n.classList.contains('bubble-checklist');
+          const isIdea = n.classList.contains('bubble-idea');
+          const snippet = (n.textContent || '').trim().slice(0, 24).replace(/\s+/g, ' ');
+          const base = isCheck ? 'Mensagem Checklist' : isIdea ? 'Mensagem Ideia' : n.classList.contains('remote') ? 'Mensagem Recebida' : 'Mensagem Enviada';
+          n.setAttribute('data-friendly-name', `${base}: "${snippet}..."`);
+          // sub-componentes da bolha
+          const meta = n.querySelector('.meta');
+          if (meta) meta.setAttribute('data-friendly-name', 'Bolha: timestamp/status');
+          const toggle = n.querySelector('.msg-toggle');
+          if (toggle) toggle.setAttribute('data-friendly-name', 'Bolha: Menu (▾)');
+        }
+        if (n.classList.contains('tnode') && !n.hasAttribute('data-friendly-name')) {
+          const label = n.querySelector('.label')?.textContent || 'sem nome';
+          const isFolder = n.classList.contains('folder-node');
+          n.setAttribute('data-friendly-name', `${isFolder ? 'Pasta' : 'Caderno'}: ${label}`);
+        }
+        // Composer sub-componentes
+        if (n.id === 'composer-input') n.setAttribute('data-friendly-name', 'Input: Escreva sua anotação');
+        if (n.id === 'btn-send') n.setAttribute('data-friendly-name', 'Input: Botão Enviar (→)');
+        if (n.id === 'btn-attach') n.setAttribute('data-friendly-name', 'Input: Anexar');
+        if (n.closest && n.closest('.md-check')) {
+          n.setAttribute('data-friendly-name', 'Checklist: item');
         }
       });
     });
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // Inicializa elementos já existentes no DOM
+  document.querySelectorAll('#composer-input').forEach(el => el.setAttribute('data-friendly-name', 'Input: Escreva sua anotação'));
+  document.querySelectorAll('#btn-send').forEach(el => el.setAttribute('data-friendly-name', 'Input: Botão Enviar'));
+  document.querySelectorAll('#btn-attach').forEach(el => el.setAttribute('data-friendly-name', 'Input: Anexar'));
+  document.querySelectorAll('.fmt-btn').forEach(el => {
+    const fmt = el.dataset.fmt;
+    el.setAttribute('data-friendly-name', `Input: Formatação ${fmt}`);
+  });
+  document.querySelectorAll('.search-box').forEach(el => {
+    if (!el.hasAttribute('data-friendly-name')) el.setAttribute('data-friendly-name', 'Explorer: Campo de Busca');
+  });
 })();

@@ -92,7 +92,10 @@ openThread(id) {
       const mine = n.userId === (Store.user && Store.user.mail) || n.local;
       const thread = Store.getThread(this.activeThread);
       const isPinned = thread && thread.pinnedId === n.clientId;
-      div.className = 'bubble' + (mine ? '' : ' remote') + (n.pending ? ' pending' : '') + (isPinned ? ' pinned' : '');
+      let cozyExtra = '';
+      if (n.text && /^\s*\[( |x)\]/m.test(n.text)) cozyExtra = ' bubble-checklist';
+      else if (n.text && /ideia:/i.test(n.text)) cozyExtra = ' bubble-idea';
+      div.className = 'bubble' + (mine ? '' : ' remote') + (n.pending ? ' pending' : '') + (isPinned ? ' pinned' : '') + cozyExtra;
       div.dataset.clientId = n.clientId;
       div.dataset.day = new Date(n.ts).toDateString();
       div.setAttribute('draggable', 'true');

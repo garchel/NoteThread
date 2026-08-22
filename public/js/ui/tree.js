@@ -139,16 +139,31 @@ folderNode(f) {
       return wrap;
     },
 
-threadNode(t, depth) {
+    _cadernoColor(t) {
+      const palette = [
+        { bg: '#FFF3D9', fg: '#E28D42' },
+        { bg: '#E3F0FA', fg: '#589B99' },
+        { bg: '#E6F2F2', fg: '#589B99' },
+        { bg: '#FFF0E0', fg: '#E28D42' },
+        { bg: '#F0E6FF', fg: '#7c5cff' },
+        { bg: '#E0F5E9', fg: '#589B99' },
+      ];
+      let hash = 0;
+      const str = t.id + (t.emoji || '');
+      for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+      return palette[hash % palette.length];
+    },
+    threadNode(t, depth) {
       const el = document.createElement('div');
-      el.className = 'tnode' + (this.activeThread === t.id ? ' active' : '') + (t.favorite ? ' fav' : '');
+      el.className = 'tnode cozy-caderno' + (this.activeThread === t.id ? ' active' : '') + (t.favorite ? ' fav' : '');
       el.dataset.tid = t.id;
       el.setAttribute('draggable', 'true');
       el.style.paddingLeft = (8 + depth * 16) + 'px';
       let ic;
-      if (t.favorite) ic = wrapSvg(ICON.star, 15);
-      else if (t.emoji) ic = esc(t.emoji); // emoji escolhido pelo usuário (unicode)
-      else ic = wrapSvg(ICON.bubble, 15);
+      const col = this._cadernoColor(t);
+      if (t.favorite) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${wrapSvg(ICON.star, 14)}</span>`;
+      else if (t.emoji) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${esc(t.emoji)}</span>`;
+      else ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${wrapSvg(ICON.bubble, 14)}</span>`;
       const noteCount = Store.notesFor(t.id).length;
       const countEl = noteCount ? `<span class="note-count" title="${noteCount} nota${noteCount !== 1 ? 's' : ''}">${noteCount}</span>` : '';
       // badge ⏰ se a thread tem lembrete pendente

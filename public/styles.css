@@ -307,8 +307,8 @@ body::before {
 .explorer-label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-light); font-weight: 700; padding: 16px 14px 8px; }
 .cozy-caderno { gap: 10px; padding: 10px 12px; border-radius: 12px; }
 .cozy-caderno .caderno-ico {
-  width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center;
-  font-size: 16px; flex-shrink: 0; border: 1px solid rgba(0,0,0,.04);
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  font-size: 18px; flex-shrink: 0; border: 1px solid rgba(0,0,0,.04);
 }
 .cozy-caderno.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .cozy-caderno .label { font-weight: 600; }
@@ -425,11 +425,15 @@ body::before {
 /* Chat */
 .chat { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg-chat); position: relative; }
 .cozy-banner {
-  background: var(--accent); color: #fff; margin: 14px 16px 0; padding: 14px 18px;
+  background: var(--accent); color: #1a1a1a; margin: 14px 16px 0; padding: 14px 18px;
   border-radius: 14px; font-weight: 800; font-size: var(--text-lg); box-shadow: var(--shadow-sm);
 }
-.cozy-banner .chat-name { color: #fff; }
-.cozy-composer { background: var(--bg-explorer); border-top: 1px solid var(--border-light); padding: 12px 16px; }
+.cozy-banner .chat-name { color: #1a1a1a; }
+.cozy-composer {
+  position: absolute; bottom: 16px; left: 16px; right: 16px;
+  background: transparent; border: none; padding: 0;
+  z-index: 5;
+}
 .cozy-composer .composer-bar { display: none; }
 .cozy-input-row { background: #fff; border: 1.5px solid var(--border); border-radius: 24px; padding: 8px 8px 8px 16px; display: flex; align-items: center; gap: 8px; }
 .cozy-input-wrap { flex: 1; }
@@ -480,8 +484,9 @@ body::before {
 
 .messages {
   position: relative;
-  flex: 1; overflow-y: auto; padding: 20px 18px 10px;
+  flex: 1; overflow-y: auto; padding: 14px 16px 90px;
   display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg-chat);
 }
 .load-older {
   text-align: center; color: var(--text-dim); font-size: var(--text-sm); padding: var(--space-2) var(--space-3);

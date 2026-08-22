@@ -982,6 +982,26 @@ button:focus { outline: none; }
 /* Toast mais amigável */
 .app-toast { border-radius: 14px; padding: 11px 20px; font-size: 14px; }
 
+/* Friendly Names — devtools style */
+.friendly-toggle {
+  position: fixed; bottom: 16px; right: 16px; z-index: 9999;
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px; border: none;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: var(--shadow-md); transition: all .15s;
+}
+.friendly-toggle.active { background: #22c55e !important; }
+.friendly-toggle.inactive { background: #ef4444 !important; }
+.friendly-tooltip {
+  position: fixed; z-index: 10000; background: #1f2937; color: #fff;
+  padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  pointer-events: none; white-space: nowrap; box-shadow: var(--shadow-md);
+}
+.friendly-tooltip.hidden { display: none; }
+.friendly-highlight {
+  outline: 2px dashed #22c55e !important; outline-offset: 2px; background: rgba(34,197,94,.08) !important;
+}
+
 /* Densidade adaptativa */
 [data-density="compact"] .tnode { padding: 6px 8px; font-size: 13px; }
 [data-density="compact"] .bubble { padding: 8px 12px; font-size: 14px; }

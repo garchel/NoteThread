@@ -32,8 +32,8 @@ App 100% estático + Supabase (sem backend próprio):
 
 ```bash
 npm install
-npx serve public        # ou qualquer servidor estático / VSCode Live Server
-# abra http://localhost:3000
+npx serve public -l 3001   # ou qualquer servidor estático / VSCode Live Server
+# abra http://localhost:3001
 ```
 
 Configure `window.SUPABASE_URL`/`SUPABASE_ANON_KEY` em `public/index.html` e rode `supabase.sql` no SQL Editor.

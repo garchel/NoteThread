@@ -149,9 +149,18 @@ folderNode(f) {
         { bg: '#E0F5E9', fg: '#589B99' },
       ];
       let hash = 0;
-      const str = t.id + (t.emoji || '');
+      const str = t.id + (t.emoji || t.name || '');
       for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
       return palette[hash % palette.length];
+    },
+    _cadernoHugeIcon(t) {
+      const n = (t.name || '').toLowerCase();
+      if (n.includes('ideia')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.5 1.2 4.7 3 6.2V18a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.8c1.8-1.5 3-3.7 3-6.2a7 7 0 0 0-7-7z"/></svg>';
+      if (n.includes('compra') || n.includes('mercado')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>';
+      if (n.includes('lembrete') || n.includes('importante')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+      if (n.includes('trabalho') || n.includes('projeto')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>';
+      if (n.includes('rápida') || n.includes('rapida')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+      return null;
     },
     threadNode(t, depth) {
       const el = document.createElement('div');
@@ -161,7 +170,9 @@ folderNode(f) {
       el.style.paddingLeft = (8 + depth * 16) + 'px';
       let ic;
       const col = this._cadernoColor(t);
-      if (t.favorite) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${wrapSvg(ICON.star, 14)}</span>`;
+      const huge = this._cadernoHugeIcon(t);
+      if (huge) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${huge}</span>`;
+      else if (t.favorite) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${wrapSvg(ICON.star, 14)}</span>`;
       else if (t.emoji) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${esc(t.emoji)}</span>`;
       else ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${wrapSvg(ICON.bubble, 14)}</span>`;
       const noteCount = Store.notesFor(t.id).length;

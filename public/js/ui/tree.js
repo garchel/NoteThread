@@ -11,16 +11,22 @@ bindTreeActions() {
       $('#btn-back').addEventListener('click', () => $('#app').classList.remove('show-chat'));
     },
 
-createThread() {
-      let chosen = 'chat'; // id do ícone vetorial (GLYPH_ICONS)
+    createThread() {
+      let chosen = 'chat';
       let chosenColor = null;
+      let useEmoji = false;
       const body = `
         <label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Nome da conversa</label>
         <input id="nt-name" type="text" placeholder="ex: Ideias de Projetos, Tarefas Diárias…" autofocus />
         <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Cor</label>
         ${this._colorSwatchesHTML('nt', null)}
-        <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Ícone</label>
-        <div id="nt-glyphs">${this._glyphPickerHTML('nt', chosen)}</div>`;
+        <div style="display:flex;align-items:center;gap:8px;margin:14px 0 6px">
+          <label style="font-size:13px;color:var(--text-dim);font-weight:600;flex:1">Ícone</label>
+          <label class="switch" style="transform:scale(0.85)"><input type="checkbox" id="nt-emoji-toggle"/><span class="slider"></span></label>
+          <span style="font-size:12px;color:var(--text-dim)">Emojis</span>
+        </div>
+        <div id="nt-glyphs">${this._glyphPickerHTML('nt', chosen)}</div>
+        <div id="nt-emojis" class="hidden"><div class="ep">${this._pickerHTML('nt-emoji', '💬')}</div></div>`;
       this.showModal('Nova conversa', body, () => {
         const v = ($('#nt-name').value || '').trim();
         if (!v) { $('#nt-name').focus(); return; }
@@ -34,19 +40,33 @@ createThread() {
       });
       this._bindColorSwatches('nt', null, (c) => { chosenColor = c; });
       this._bindGlyphPicker('nt', (g) => { chosen = g; });
+      const ntToggle = $('#nt-emoji-toggle');
+      if (ntToggle) ntToggle.addEventListener('change', () => {
+        useEmoji = ntToggle.checked;
+        $('#nt-glyphs').classList.toggle('hidden', useEmoji);
+        $('#nt-emojis').classList.toggle('hidden', !useEmoji);
+        if (useEmoji) this._bindPicker('nt-emoji', '💬', (e) => { chosen = e; });
+      });
+      this._bindPicker('nt-emoji', '💬', (e) => { chosen = e; });
       setTimeout(() => $('#nt-name') && $('#nt-name').focus(), 50);
     },
 
-createFolder() {
+    createFolder() {
       let chosen = 'folder';
       let chosenColor = null;
+      let useEmojiFolder = false;
       const body = `
         <label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Nome da pasta</label>
         <input id="nf-name" type="text" placeholder="ex: Trabalho, Pessoal, Estudos…" autofocus />
         <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Cor</label>
         ${this._colorSwatchesHTML('nf', null)}
-        <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Ícone</label>
-        <div id="nf-glyphs">${this._glyphPickerHTML('nf', chosen)}</div>`;
+        <div style="display:flex;align-items:center;gap:8px;margin:14px 0 6px">
+          <label style="font-size:13px;color:var(--text-dim);font-weight:600;flex:1">Ícone</label>
+          <label class="switch" style="transform:scale(0.85)"><input type="checkbox" id="nf-emoji-toggle"/><span class="slider"></span></label>
+          <span style="font-size:12px;color:var(--text-dim)">Emojis</span>
+        </div>
+        <div id="nf-glyphs">${this._glyphPickerHTML('nf', chosen)}</div>
+        <div id="nf-emojis" class="hidden"><div class="ep">${this._pickerHTML('nf-emoji', '📁')}</div></div>`;
       this.showModal('Nova pasta', body, () => {
         const v = ($('#nf-name').value || '').trim();
         if (!v) { $('#nf-name').focus(); return; }
@@ -60,6 +80,14 @@ createFolder() {
       });
       this._bindColorSwatches('nf', null, (c) => { chosenColor = c; });
       this._bindGlyphPicker('nf', (g) => { chosen = g; });
+      const nfToggle = $('#nf-emoji-toggle');
+      if (nfToggle) nfToggle.addEventListener('change', () => {
+        useEmojiFolder = nfToggle.checked;
+        $('#nf-glyphs').classList.toggle('hidden', useEmojiFolder);
+        $('#nf-emojis').classList.toggle('hidden', !useEmojiFolder);
+        if (useEmojiFolder) this._bindPicker('nf-emoji', '📁', (e) => { chosen = e; });
+      });
+      this._bindPicker('nf-emoji', '📁', (e) => { chosen = e; });
       setTimeout(() => $('#nf-name') && $('#nf-name').focus(), 50);
     },
 

@@ -294,11 +294,15 @@ toggleFavorite(id) {
       });
     },
 
-openThreadMenu(e, t) {
+    openThreadMenu(e, t) {
       this.ctxThreadId = t.id;
       const m = this.dom.ctx;
-      m.querySelector('[data-act="fav"]').style.display = t.favorite ? 'none' : 'block';
-      m.querySelector('[data-act="unfav"]').style.display = t.favorite ? 'block' : 'none';
+      // restaura o HTML de threads se o menu estiver com o HTML de pastas
+      if (m.dataset.origHtml) { m.innerHTML = m.dataset.origHtml; delete m.dataset.origHtml; }
+      const favBtn = m.querySelector('[data-act="fav"]');
+      const unfavBtn = m.querySelector('[data-act="unfav"]');
+      if (favBtn) favBtn.style.display = t.favorite ? 'none' : 'block';
+      if (unfavBtn) unfavBtn.style.display = t.favorite ? 'block' : 'none';
       m.classList.remove('hidden');
       m.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
       m.style.top = Math.min(e.clientY, window.innerHeight - 220) + 'px';
@@ -307,6 +311,8 @@ openThreadMenu(e, t) {
 
     openFolderMenu(e, f) {
       const m = this.dom.ctx;
+      // preserva o HTML original do menu de threads para não quebrar o próximo openThreadMenu
+      if (!m.dataset.origHtml) m.dataset.origHtml = m.innerHTML;
       m.innerHTML = `<button data-act="rename-folder">✎ Renomear pasta</button>
                      <button data-act="delete-folder" class="danger">🗑 Excluir caderno</button>`;
       m.classList.remove('hidden');
@@ -317,7 +323,15 @@ openThreadMenu(e, t) {
         if (act === 'rename-folder') this.renameFolder(f.id);
         else if (act === 'delete-folder') this.confirmDeleteFolder(f.id);
         m.classList.add('hidden');
+        // restaura o menu de threads para o próximo uso
+        if (m.dataset.origHtml) { m.innerHTML = m.dataset.origHtml; delete m.dataset.origHtml; }
       }));
+      // restaura ao fechar por clique fora
+      const restore = () => {
+        if (m.dataset.origHtml) { m.innerHTML = m.dataset.origHtml; delete m.dataset.origHtml; }
+        document.removeEventListener('click', restore);
+      };
+      setTimeout(() => document.addEventListener('click', restore, { once: true }), 0);
       e.stopPropagation();
     },
     renameFolder(id) {

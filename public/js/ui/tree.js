@@ -277,8 +277,14 @@ toggleFavorite(id) {
       Sound.play(t.favorite ? 'favorite' : 'pin'); haptic('light');
     },
 
-bindContextMenu() {
-      document.addEventListener('click', () => this.dom.ctx.classList.add('hidden'));
+    bindContextMenu() {
+      document.addEventListener('click', (e) => {
+        if (e.button === 2) return;
+        if (!this.dom.ctx.contains(e.target)) this.dom.ctx.classList.add('hidden');
+      });
+      document.addEventListener('contextmenu', (e) => {
+        if (!e.target.closest('.tnode')) this.dom.ctx.classList.add('hidden');
+      });
       // handler global para ações do menu de thread (data-act)
       this.dom.ctx.addEventListener('click', (e) => {
         const b = e.target.closest('button');

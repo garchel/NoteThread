@@ -6,8 +6,8 @@ import { Sync } from '../sync-supabase.js';
 import { Sound } from '../sound.js';
 
 export const MessagesMethods = {
-openThread(id) {
-      if (this.activeThread === id) return; // evita re-tocar som ao reabrir a mesma
+    openThread(id) {
+      if (this.activeThread === id) return;
       this.activeThread = id;
       this.renderedClientIds = new Set();
       this.oldestTs = null; this.loading = false;
@@ -18,7 +18,10 @@ openThread(id) {
       $('#composer-input').disabled = false; $('#btn-send').disabled = false;
       this.dom.pinPopover.classList.add('hidden');
       this.updatePinButton();
-      // destaca a thread ativa sem reconstruir a árvore (evita re-render do explorador)
+      // esconde páginas Busca/Lembretes se abertas
+      document.getElementById('search-page')?.classList.add('hidden');
+      document.getElementById('reminders-page')?.classList.add('hidden');
+      document.getElementById('messages').classList.remove('hidden');
       document.querySelectorAll('.tnode.active').forEach((el) => el.classList.remove('active'));
       document.querySelectorAll(`.tnode[data-tid="${id}"]`).forEach((el) => el.classList.add('active'));
       this.renderMessages(true);
@@ -50,6 +53,43 @@ openThread(id) {
       const el = $('#chat-active-ui');
       if (!el) return;
       el.classList.toggle('visible', show);
+    },
+
+    // aplica (ou limpa) a cor do caderno no cabeçalho banner, conforme o setting headerMatchColor
+    applyThreadHeaderColor(threadId) {
+      const hdr = document.getElementById('chat-header');
+      if (!hdr) return;
+      const on = !!(Store.data.ui && Store.data.ui.headerMatchColor);
+      const t = threadId && Store.getThread(threadId);
+      if (on && t) {
+        // cor escolhida pelo usuário tem prioridade; senão hash determinístico
+        const col = this._cadernoColor(t);
+        hdr.classList.add('thread-colored');
+        hdr.style.background = col.bg;
+        // contraste WCAG: se o fundo for claro, usa texto escuro em vez de branco
+        const fg = this._readableTextColor(col.bg);
+        hdr.style.color = fg;
+        const nameEl = hdr.querySelector('.chat-name');
+        if (nameEl) nameEl.style.color = fg;
+      } else {
+        hdr.classList.remove('thread-colored');
+        hdr.style.background = '';
+        hdr.style.color = '';
+        const nameEl = hdr.querySelector('.chat-name');
+        if (nameEl) nameEl.style.color = '';
+      }
+    },
+
+    // escolhe preto ou branco conforme a luminância do fundo (WCAG)
+    _readableTextColor(hexBg) {
+      const h = hexBg.replace('#', '');
+      const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+      const [r, g, b] = [0, 2, 4].map((i) => {
+        let v = parseInt(full.slice(i, i + 2), 16) / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      return L > 0.4 ? '#1f1a17' : '#ffffff';
     },
 
     renderMessages(reset) {

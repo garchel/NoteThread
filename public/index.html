@@ -69,7 +69,7 @@
 
     <!-- Explorer -->
     <aside id="sidebar" class="sidebar" data-friendly-name="Painel do Explorador (Sidebar Secundária)">
-      <div class="search-box" data-friendly-name="Campo de Busca (Buscam)">
+      <div class="search-box" data-friendly-name="Campo de Busca (Busca)">
         <span class="search-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
         <input id="search-input" type="search" placeholder="Buscar notas…  #tag · in:caderno" autocomplete="off" />
         <button id="search-clear" class="search-clear hidden" title="Limpar">×</button>
@@ -116,6 +116,15 @@
           </div>
         </header>
         <div id="backlinks" class="backlinks hidden" data-friendly-name="Backlinks (Mencionado em)"></div>
+
+        <div id="search-page" class="search-page hidden" data-friendly-name="Página de Busca">
+          <header class="cozy-banner"><button id="search-back" class="btn-icon mobile-only" title="Voltar">‹</button><div class="chat-name">Busca</div><span id="search-query-label" class="search-query-label"></span></header>
+          <div id="search-page-results" class="search-page-results"></div>
+        </div>
+        <div id="reminders-page" class="reminders-page hidden" data-friendly-name="Página de Lembretes">
+          <header class="cozy-banner"><button id="reminders-back" class="btn-icon mobile-only" title="Voltar">‹</button><div class="chat-name">Lembretes</div></header>
+          <div id="reminders-page-list" class="reminders-page-list"></div>
+        </div>
 
         <div id="live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
         <div id="messages" class="messages" role="log" aria-live="off" aria-relevant="additions text" aria-atomic="false" aria-label="Mensagens da conversa" data-friendly-name="Fluxo de Mensagens (Balões)">

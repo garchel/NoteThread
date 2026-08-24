@@ -50,18 +50,16 @@ async init() {
         const si = $('#search-input');
         if (si) { si.focus(); si.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
       });
-      // Lembretes: popover com notas pendentes
+      // Lembretes: página no canvas (ocupa área principal)
       const navRem = $('#nav-reminders');
       if (navRem) {
-        navRem.addEventListener('click', (e) => { e.stopPropagation(); this.toggleRemindersPopover(); });
-        document.addEventListener('click', (e) => {
-          const p = $('#rem-popover');
-          if (p && !p.classList.contains('hidden') && !p.contains(e.target) && !navRem.contains(e.target)) {
-            p.classList.add('hidden');
-          }
-        });
+        navRem.addEventListener('click', () => this.showRemindersPage());
+        const backRem = document.getElementById('reminders-back');
+        if (backRem) backRem.addEventListener('click', () => this.hideRemindersPage());
         this.updateRemBadge();
       }
+      const backSearch = document.getElementById('search-back');
+      if (backSearch) backSearch.addEventListener('click', () => this.hideSearchPage());
       // (o toggle do popover de configurações é ligado em bindSettings, ancorado no #nav-settings)
       this.bindModal();
       this.bindMsgPopover();

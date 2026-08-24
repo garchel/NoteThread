@@ -3,12 +3,42 @@ import { ICON, wrapSvg } from '../icons.js';
 import { Store } from '../store.js';
 
 export const NavigationMethods = {
-bindSearch() {
+    showSearchPage(q) {
+      const page = document.getElementById('search-page');
+      const label = document.getElementById('search-query-label');
+      const results = document.getElementById('search-page-results');
+      if (!page) return;
+      document.getElementById('messages').classList.add('hidden');
+      document.getElementById('backlinks').classList.add('hidden');
+      document.getElementById('live-region').classList.add('hidden');
+      page.classList.remove('hidden');
+      document.getElementById('reminders-page')?.classList.add('hidden');
+      if (label) label.textContent = q ? `"${q}"` : '';
+      // reutiliza runSearch para popular a página completa
+      const tmpClear = { classList: { add(){}, remove(){} } };
+      this.runSearch(q, results, tmpClear);
+      history.replaceState(null, '', q ? `?q=${encodeURIComponent(q)}` : location.pathname);
+    },
+    hideSearchPage() {
+      const page = document.getElementById('search-page');
+      if (page) page.classList.add('hidden');
+      document.getElementById('messages').classList.remove('hidden');
+      document.getElementById('backlinks').classList.remove('hidden');
+      history.replaceState(null, '', location.pathname);
+    },
+    bindSearch() {
       const input = this.dom.searchInput, clear = this.dom.searchClear, results = this.dom.searchResults;
-      const run = () => this.runSearch(input.value.trim(), results, clear);
+      const run = () => {
+        const q = input.value.trim();
+        // se tem filtro, Enter abre página cheia no canvas
+        if (q && (q.includes('in:') || q.includes('#') || q.includes('depois:') || q.includes('antes:'))) {
+          // mostra preview rápido ainda, mas Enter levará para página
+        }
+        this.runSearch(q, results, clear);
+      };
       input.addEventListener('input', run);
       input.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') { input.value = ''; run(); input.blur(); }
+        if (e.key === 'Escape') { input.value = ''; run(); input.blur(); this.hideSearchPage(); }
         else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
           e.preventDefault();
           const items = Array.from(results.querySelectorAll('.search-result'));
@@ -18,6 +48,12 @@ bindSearch() {
           if (next < 0) next = items.length - 1; if (next >= items.length) next = 0;
           items[next].focus();
         } else if (e.key === 'Enter') {
+          const q = input.value.trim();
+          if (q && (q.includes('in:') || q.includes('#') || q.includes('depois:') || q.includes('antes:'))) {
+            e.preventDefault();
+            this.showSearchPage(q);
+            return;
+          }
           const first = results.querySelector('.search-result'); if (first) first.click();
         }
       });

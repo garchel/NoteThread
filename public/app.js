@@ -52,6 +52,18 @@ async init() {
         if (backRem) backRem.addEventListener('click', () => this.hideRemindersPage());
         this.updateRemBadge();
       }
+      const notifBtn = document.getElementById('btn-notifications');
+      if (notifBtn) {
+        notifBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggleNotifPopover(); });
+        document.addEventListener('click', (e) => {
+          const p = document.getElementById('notif-popover');
+          if (p && !p.classList.contains('hidden') && !p.contains(e.target) && !notifBtn.contains(e.target)) p.classList.add('hidden');
+        });
+        this.updateNotifBadge();
+        // atualiza badge quando lembretes mudam
+        const origCheck = this._checkReminders.bind(this);
+        this._checkReminders = () => { origCheck(); this.updateNotifBadge(); };
+      }
       const backSearch = document.getElementById('search-back');
       if (backSearch) backSearch.addEventListener('click', () => this.hideSearchPage());
       // Perfil popover

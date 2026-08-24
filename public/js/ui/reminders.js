@@ -190,6 +190,61 @@ showReminderModal(clientId) {
       }));
     },
 
+    // ---------- Notificações: histórico ----------
+    allRemindersHistory() {
+      const out = [];
+      Object.entries(Store.data.notes).forEach(([tid, arr]) => {
+        (arr || []).forEach((n) => { if (n.remindAt) out.push({ threadId: tid, note: n }); });
+      });
+      return out.sort((a, b) => b.note.remindAt - a.note.remindAt);
+    },
+    updateNotifBadge() {
+      const badge = document.getElementById('notif-badge');
+      if (!badge) return;
+      const count = this.allRemindersHistory().length;
+      if (count > 0) { badge.textContent = count > 9 ? '9+' : String(count); badge.classList.remove('hidden'); }
+      else badge.classList.add('hidden');
+    },
+    toggleNotifPopover() {
+      const p = document.getElementById('notif-popover');
+      if (!p) return;
+      if (!p.classList.contains('hidden')) { p.classList.add('hidden'); return; }
+      this.renderNotifHistory();
+      p.classList.remove('hidden');
+      p.style.visibility = 'hidden';
+      const anchor = document.getElementById('btn-notifications');
+      const r = anchor.getBoundingClientRect();
+      const pw = Math.min(360, window.innerWidth - 16);
+      p.style.left = '0px'; p.style.top = '0px';
+      let left = r.right + 12;
+      if (left + pw > window.innerWidth - 8) left = Math.max(8, r.left - pw - 12);
+      let top = Math.max(8, Math.min(r.top, window.innerHeight - p.offsetHeight - 8));
+      p.style.left = left + 'px';
+      p.style.top = top + 'px';
+      p.style.visibility = '';
+    },
+    renderNotifHistory() {
+      const list = document.getElementById('notif-list');
+      if (!list) return;
+      const items = this.allRemindersHistory();
+      if (!items.length) { list.innerHTML = '<div class="rem-empty">Nenhum lembrete ainda</div>'; return; }
+      list.innerHTML = items.map(({ threadId, note }) => {
+        const th = Store.getThread(threadId);
+        const when = new Date(note.remindAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const snippet = esc((note.text || '').replace(/^(\s*)\[( |x)\]\s*/gm, '').slice(0, 60)) || 'Lembrete';
+        const fired = note.remindFired;
+        return `<button type="button" class="rem-item" data-tid="${threadId}" data-cid="${note.clientId}">
+                  <span class="rem-when${fired ? '' : ' overdue'}">${fired ? '✓' : '⏰'} ${when} ${fired ? '· disparado' : '· pendente'}</span>
+                  <span class="rem-snippet">${snippet}</span>
+                  <span class="rem-thread">${esc(th ? th.name : '')}</span>
+                </button>`;
+      }).join('');
+      list.querySelectorAll('.rem-item').forEach((b) => b.addEventListener('click', () => {
+        document.getElementById('notif-popover').classList.add('hidden');
+        if (Store.getThread(b.dataset.tid)) this.openThread(b.dataset.tid);
+      }));
+    },
+
     // ---------- Composer ----------,
 };
 

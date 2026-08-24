@@ -64,6 +64,7 @@
           <div class="brand-sub">Suas ideias, organizadas</div>
         </div>
         <button id="explorer-reminders" class="btn-icon-sm" title="Lembretes" aria-label="Lembretes" data-friendly-name="Explorer: Lembretes"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nav-badge hidden" id="rem-badge"></span></button>
+        <button id="btn-notifications" class="btn-icon-sm" title="Notificações" aria-label="Notificações" data-friendly-name="Explorer: Notificações"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-6 9-6 9h16s-6-2-6-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="nav-badge hidden" id="notif-badge"></span></button>
       </div>
       <div class="search-box" data-friendly-name="Campo de Busca (Busca)">
         <span class="search-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
@@ -286,6 +287,11 @@
   <div id="rem-popover" class="popover rem-popover hidden" role="dialog" aria-label="Lembretes pendentes">
     <div class="rem-head">⏰ Lembretes pendentes</div>
     <div id="rem-list" class="rem-list"></div>
+  </div>
+
+  <div id="notif-popover" class="popover rem-popover hidden" role="dialog" aria-label="Histórico de notificações">
+    <div class="rem-head">🔔 Histórico de lembretes</div>
+    <div id="notif-list" class="rem-list"></div>
   </div>
 
   <div id="pin-popover" class="popover pin-popover hidden" role="dialog">

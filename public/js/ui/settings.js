@@ -257,11 +257,11 @@ handleSetting(act, val) {
       }
     },
 
-toggleSettingsPopover() {
+    toggleSettingsPopover() {
       const p = this.dom.settingsPopover;
       if (!p.classList.contains('hidden')) { p.classList.add('hidden'); return; }
-      // ancora no botão de configurações da barra lateral (nav)
-      const anchor = this.dom.navSettings || this.dom.btnSettings;
+      // ancora no perfil (novo) ou nos botões legados
+      const anchor = document.getElementById('profile-btn') || this.dom.navSettings || this.dom.btnSettings;
       if (!anchor) return;
       p.classList.remove('hidden');
       p.style.visibility = 'hidden'; // mede sem piscar na posição errada

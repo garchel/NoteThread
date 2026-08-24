@@ -207,7 +207,7 @@ bindSettings() {
       });
     },
 
-applyTheme() {
+    applyTheme() {
       const theme = (Store.data && Store.data.ui && Store.data.ui.theme) || 'lavender';
       let resolved = theme;
       if (theme === 'auto') {
@@ -219,6 +219,15 @@ applyTheme() {
       if (meta) {
         const colors = { lavender:'#7c5cff', dark:'#191622', mint:'#1faa86', peach:'#ff7a59', ocean:'#2b8fd6', midnight:'#0e1525' };
         meta.setAttribute('content', colors[resolved] || '#7c5cff');
+      }
+      // regenera o padrão de fundo com a cor do novo tema
+      const chatEl = document.querySelector('.chat');
+      const pat = (Store.data.ui && Store.data.ui.chatBgPattern) || '';
+      const scale = (Store.data.ui && Store.data.ui.chatBgScale) || 1;
+      if (chatEl && pat) {
+        const SIZES = [0.6, 0.8, 1.0, 1.3, 1.7, 2.2];
+        const clamped = SIZES.reduce((best, cur) => Math.abs(cur - scale) < Math.abs(best - scale) ? cur : best, SIZES[2]);
+        chatEl.style.setProperty('--pattern-image', buildPattern(pat, clamped));
       }
     },
 

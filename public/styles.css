@@ -90,15 +90,32 @@
   --surf-nav: #e6dff5;
 }
 
-/* Escuro (dark) */
+/* Escuro (dark) — preto e cinza */
 [data-theme="dark"] {
-  --bg: #191622;
-  --bg-nav: #141120;
-  --glyph-stars: #8a7a5a;
-  --glyph-hearts: #9a6a6a;
-  --glyph-clouds: #6a7a8a;
-  --glyph-leaves: #6a8a7a;
-  --glyph-circles: #7a6a5a;
+  --bg: #0f0f0f;
+  --bg-nav: #0a0a0a;
+  --bg-elev: #1a1a1a;
+  --bg-explorer: #141414;
+  --bg-chat: #1a1a1a;
+  --bg-chat-inner: #1e1e1e;
+  --bubble-me: #2a2a2a;
+  --bubble-me-2: #1f1f1f;
+  --bubble-cream: #2a2a2a;
+  --bubble-blue: #2a2a2a;
+  --bubble-gray: #2a2a2a;
+  --bubble-sys: #2a2a2a;
+  --text: #e5e5e5;
+  --text-dim: #8a8a8a;
+  --text-light: #6a6a6a;
+  --border: #2a2a2a;
+  --border-light: #222222;
+  --accent: #888888;
+  --accent-soft: #2a2a2a;
+  --glyph-stars: #4a4a4a;
+  --glyph-hearts: #4a4a4a;
+  --glyph-clouds: #4a4a4a;
+  --glyph-leaves: #4a4a4a;
+  --glyph-circles: #4a4a4a;
   --bg-elev: #221d2e;
   --bg-explorer: #1e1930;
   --bg-chat: #15111d;

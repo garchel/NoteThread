@@ -1,158 +1,159 @@
 # Roadmap — NoteThread v1 Estável (Web + Mobile)
 
 > **Checklist único de lançamento.** Consolida `PROGRESSO.md` + `MOBILE_TASKS.md` e adiciona tasks faltantes para uma versão estável.
-> Última atualização: 21/08/2026 · Fonte técnica: `README.md`, `server/www.js`, `server/sync.js`, `public/app.js`, `public/manifest.webmanifest`
+> Última atualização: 24/08/2026 · Fonte técnica: `README.md`, `public/app.js`, `public/js/**`, `vercel.json`, `.github/workflows/ci.yml`, `supabase.sql`
+
+> **⚠️ Nota de arquitetura (24/08):** o backend Node próprio (`server/*`) foi **removido** (`17cdd5d`). Deploy é estático na **Vercel** (`vercel.json`: headers CSP/X-Frame, cache-control do SW) + **Supabase** para auth (Google OAuth), Postgres com RLS e Storage. As Fases 0–1 abaixo foram absorvidas por essa pilha — mantidas como histórico.
 
 ---
 
 ## 0. Definição de Pronto (DoR) para v1
 
-**Web estável =** host HTTPS único + BD persistente + auth real + PWA instalável + Lighthouse PWA ≥90 + sem `confirm()` nativo + sem perda de dados ao reiniciar.
+**Web estável =** host HTTPS único ✅ (Vercel) + BD persistente ✅ (Supabase) + auth real ✅ (Google OAuth via Supabase) + PWA instalável ✅ + Lighthouse PWA ≥90 ⏳ medir + sem `confirm()` nativo ✅ + sem perda de dados ao reiniciar ✅.
 
-**Mobile estável =** Fase 1 crítica de `MOBILE_TASKS.md:20` 100% resolvida + touch ≥44px + popovers cabem em 375px + swipe/back funcionam + APK/TWA instalável com ícones finais.
+**Mobile estável =** touch ≥44px ⏳ (restam 6 controles) + popovers cabem em 375px ✅ + swipe/back funcionam ✅ + APK/TWA instalável com ícones finais ✅ assets prontos.
 
 ---
 
-## FASE 0 — Infra mínima (bloqueia tudo) — 1 dia
+## FASE 0 — Infra mínima — ✅ CONCLUÍDA
 
-| # | Task | Evidência / Arquivo | Critério de aceite |
-|---|------|---------------------|--------------------|
-| W0.1 | Git: primeiro commit + push | `git status` hoje `No commits yet` | `git push -u origin main` verde |
-| W0.2 | Host único HTTPS (Render/Railway) | `server/www.js:34` `process.env.PORT`, `Procfile:1` | `https://.../health` → `{"ok":true}` + `wss://...` conecta |
-| W0.3 | Configurar `SYNC_URL` prod | `public/app.js:24` `window.NOTE_THREAD_SYNC_URL`, `public/index.html:221` | APK e web usam `wss://` sem mixed-content |
-| W0.4 | Domínio + HTTPS (auto Render) | — | URL final definida para PWABuilder |
+| # | Task | Status |
+|---|------|--------|
+| W0.1 | Git: commit + push | ✅ `main → github.com/garchel/NoteThread` |
+| W0.2 | Host único HTTPS | ✅ Vercel (estático; o plano original Render+WS foi substituído pelo Supabase Realtime) |
+| W0.3 | Config sync prod | ✅ Supabase direto (`window.SUPABASE_URL` no `index.html`, anon key pública + RLS) |
+| W0.4 | Domínio + HTTPS | ✅ HTTPS automático Vercel |
 
-## FASE 1 — Web estável / Dados (bloqueia produção)
+## FASE 1 — Web estável / Dados — ✅ CONCLUÍDA (pilha Supabase)
 
-| # | Task | Origem | Aceite |
-|---|------|--------|--------|
-| W1.1 | **Persistência real**: migrar `server/sync.js:13` `data.json` → Postgres (Render Postgres / Supabase) + `save()/load()` | `PROGRESSO.md:58` risco free tier | Reiniciar instância não apaga notas; backup diário |
-| W1.2 | **Auth real**: Google OAuth → JWT → validar `hello.userId` em `server/sync.js:62` (hoje confia no cliente) | `README` auth mock `app.js:791` | Usuário A não vê dados de B mesmo forjando `userId` |
-| W1.3 | **Segurança**: `WSS` obrigatório em prod, `CORS`, `CSP` headers, `rate-limit` no WS, `fs` path traversal já ok `www.js:24` mas faltam headers | Faltava | `npm audit` 0 high; headers `Content-Security-Policy`, `X-Frame-Options` |
-| W1.4 | Sanitização já ok `app.js:48` `esc()` + `renderMarkdown:73` mas auditar `innerHTML` em `bubbleEl:1218` | `PROGRESSO` | Sem XSS em `"><svg>` |
-| W1.5 | Secrets via `env` (nunca commit `data.json` — já em `.gitignore:5`) | `PROGRESSO:53` | `data.json` ignorado, `DATABASE_URL` em env |
-| W1.6 | Observabilidade: logs estruturados + `/health` com `users` `sync.js:179` + uptime (UptimeRobot) + Sentry | Faltava | Alerta se WS down |
+| # | Task | Status |
+|---|------|--------|
+| W1.1 | Persistência real | ✅ Supabase Postgres (`sync-supabase.js`), offline-first localStorage + fila |
+| W1.2 | Auth real | ✅ Google OAuth via Supabase (`signInWithOAuth`); isolamento por RLS (`auth.uid() = user_id` no `supabase.sql`) |
+| W1.3 | Segurança headers | ✅ `vercel.json`: CSP, X-Frame-Options DENY, X-Content-Type-Options nosniff |
+| W1.4 | Sanitização XSS | ✅ `esc()` + render markdown próprio; auditar a cada novo `innerHTML` |
+| W1.5 | Secrets via env | ✅ só anon key pública no cliente (por design); service key fora do repo |
+| W1.6 | Observabilidade | ⏳ `/health` não existe mais (sem servidor); considerar Vercel Analytics/Sentry |
 
 ## FASE 2 — Web PWA + Qualidade
 
-| # | Task | Arquivo | Aceite |
-|---|------|---------|--------|
-| W2.1 | **Ícones finais**: substituir `icon-192.png:1972b`/`icon-512.png:8175b` placeholders por ícones 1024px maskable + splash | `PROGRESSO:68` reprovam na loja | PWABuilder score 100, `maskable` sem bordas |
-| W2.2 | `manifest.webmanifest:10` `theme_color` dinâmico por `data-theme` + `meta theme-color` | `MOBILE_TASKS:44` | Status bar muda com tema |
-| W2.3 | `sw.js:3` `CACHE notethread-v8` → bump + `updateViaCache:none` já ok `app.js:1953` + testar offline `navigate` fallback `sw.js:41` | — | Lighthouse PWA ≥90, funciona avião |
-| W2.4 | **CI/CD**: GitHub Actions `lint` + `test` + deploy Render + branch protection | Faltava | PR bloqueia se teste falha |
-| W2.5 | **Testes**: unit `Store` (`upsertNote`, `moveThread`, `pageNotes`), integration `sync.js` broadcast, e2e Playwright (login → criar thread → enviar nota → sync 2 clients) | Faltava | `npm test` verde local e CI |
-| W2.6 | Performance: headers `Cache-Control` para `public/*`, `compress` (`gzip`), auditar `app.js` 1959 linhas | Faltava | Lighthouse Performance ≥90 |
-| W2.7 | Legal: `privacy.html` + `terms.html` + link no `manifest` e login | Faltava p/ loja | URL válida em `manifest` |
-| W2.8 | Versionamento `package.json:3` `1.0.0` → `semver` + `CHANGELOG.md` | Faltava | Tag `v1.0.0` |
+| # | Task | Arquivo | Aceite | Status |
+|---|------|---------|--------|--------|
+| W2.1 | Ícones finais | `icon-192/512/1024.png` maskable + `icon.svg` | PWABuilder score 100 | ✅ 1024px existe (58KB), purpose `any maskable` |
+| W2.2 | `theme_color` dinâmico por tema | `js/ui/settings.js` atualiza `<meta name="theme-color">`; manifest fixo `#7c5cff` | Status bar muda com tema | ✅ meta dinâmico (manifest continua fixo — aceitável) |
+| W2.3 | SW bump + offline | `sw.js` v70, CSS/JS network-first, `updateViaCache:none` | Funciona avião | ✅ (bump pareado com teste a cada deploy) |
+| W2.4 | CI/CD | `.github/workflows/ci.yml` | PR bloqueia se teste falha | ✅ check + test + e2e |
+| W2.5 | Testes | `tests/sync.test.js` (node:test) + Playwright e2e | Verde local e CI | ✅ 8 unit + 2 e2e specs |
+| W2.6 | Performance | `vercel.json` cache-control p/ sw.js; compress nativo Vercel | Lighthouse ≥90 | 🟡 parcial — medir Lighthouse |
+| W2.7 | Legal: privacy + terms | `public/privacy.html`, `public/terms.html` | URLs válidas | ✅ existem |
+| W2.8 | Versionamento semver + CHANGELOG | `package.json` 1.0.0 + `CHANGELOG.md` | Tag v1.0.0 | 🟡 arquivos existem; tag pendente |
 
-## FASE 3 — Mobile estável (crítico → polimento)
+## FASE 3 — Mobile estável — detalhes em `MOBILE_TASKS.md`
 
-### 3A. Críticos (bloqueiam lançamento — `MOBILE_TASKS.md:20`)
+### 3A. Críticos — ✅ TODOS implementados
+Long-press bolha ✅ · long-press tnode/pasta ✅ · navegação sidebar↔chat bidirecional ✅
+> Falta apenas: re-teste em device real antes da loja.
 
-| # | Task | Status atual | Aceite 375×812 |
-|---|------|--------------|----------------|
-| M3.1 | `msg-popover` via **long-press 500ms** em bolhas | ✅ Já em `app.js:1223` `onTouchStart` | Touch 1s abre Editar/Excluir/Pinar/Copiar |
-| M3.2 | `ctx-menu` (Favoritar/Renomear/Mover/Excluir) via long-press em `tnode` | ✅ Já em `app.js:1002` `onTnodeTouchStart` + `app.js:948` pasta | Long-press thread/pasta abre menu |
-| M3.3 | Navegação `sidebar ↔ chat` bidirecional (`btn-back` + swipe) | ✅ Já em `app.js:830` `btn-back` + `app.js:629` `bindSwipe` | Swipe dir mostra sidebar, esq esconde |
+### 3B. Alto impacto
 
-> Se 3A falhar em device real, corrigir antes de loja. Teste em Playwright `375×812` já feito `MOBILE_TASKS:3`.
+| # | Task | Aceite | Status |
+|---|------|--------|--------|
+| M3.4 | Touch targets ≥44px | WCAG | 🔴 Pendente — 6 controles pequenos: `.btn-icon-sm` 32px, `.toggle-pass` 32px, `.sync-status` 24px, `.np-close` 26px, `.attach-rm` 20px, e override `.cozy-composer-bar .fmt-btn` 34px sobre o base 44px |
+| M3.5 | Popovers responsivos | caber em 375px | ✅ `min(Xpx, calc(100vw - 16px))` em todos |
+| M3.6 | Teclado cobre composer | textarea visível | ✅ scrollIntoView + visualViewport |
+| M3.7 | Haptic | vibra Android | ✅ |
 
-### 3B. Alto impacto (`MOBILE_TASKS.md:25`)
+### 3C. Polimento
 
-| # | Task | Arquivo | Aceite |
-|---|------|---------|--------|
-| M3.4 | **Touch targets ≥44×44px**: auditar `styles.css:812` `.fmt-btn 30×28`, `.star 14px` já corrigido `styles.css:301` 44px | `MOBILE_TASKS:29` | WCAG, sem toque errado |
-| M3.5 | **Popovers responsivos**: `styles.css:554` `.pin-popover min-width:520px` + `styles.css:598` `.settings-popover 340px` estouram 375px | `MOBILE_TASKS:35` | `max-width: calc(100vw - 16px)` + `left:8px` |
-| M3.6 | **Teclado cobre composer**: `app.js:1565` `scrollIntoView` + `visualViewport` resize | `MOBILE_TASKS:30` | Ao abrir teclado, textarea visível |
-| M3.7 | **Haptic**: `app.js:32` `navigator.vibrate` em enviar/excluir/pinar | `MOBILE_TASKS:30` | Vibra em Android |
-
-### 3C. Polimento (`MOBILE_TASKS.md:31`)
-
-| # | Task | Aceite |
+| # | Task | Status |
 |---|------|--------|
-| M3.8 | Placeholder `textarea` truncado `index.html:113` → versão curta mobile via `@media` | Texto cabe |
-| M3.9 | Emoji grid `styles.css:589` `6 cols` → `4 cols` em ≤760px | Sem aperto |
-| M3.10 | Lightbox `app.js:1241` pinch-to-zoom (hoje só clique) | Pinch funciona |
-| M3.11 | `safe-area-inset` para notch (`padding: env(safe-area-inset-*)`) em `styles.css` | Conteúdo não sob notch |
-| M3.12 | Pull-to-refresh (opcional) | — |
-| M3.13 | Search `max-height:40vh` `styles.css:241` já ok, testar em SE | Não cobre tela |
+| M3.8 | Placeholder truncado mobile | ✅ media query com ellipsis |
+| M3.9 | Emoji grid mobile | ✅ 8→6 cols ≤760px (o roadmap pedia 4; 6 provou ser suficiente) |
+| M3.10 | Lightbox pinch-to-zoom | ✅ |
+| M3.11 | Safe-area notch | ✅ modal/sidebar/header/composer |
+| M3.12 | Pull-to-refresh | ✅ `_initPullToRefresh()` |
+| M3.13 | Search max-height 40vh em SE | ⏳ validar device real |
 
 ## FASE 4 — Loja (APK/TWA)
 
-| # | Task | Rota | Aceite |
-|---|------|------|--------|
-| L4.1 | Gerar **TWA via PWABuilder** (`pwabuilder.com` + URL HTTPS) — requisitos já ok: `manifest:10` icons, `sw.js` | `PROGRESSO:60` | `.apk` instala e abre standalone |
-| L4.2 | **Assets loja**: screenshots  phone/tablet, `feature graphic 1024×500`, descrição, `privacy URL` | Faltava | Play Console sem warnings |
-| L4.3 | **Contas**: Play US$25 única, Apple US$99/ano | `PROGRESSO:70` | — |
-| L4.4 | **Monetização**: AdMob / Play Billing **exigem Capacitor/Android Studio** — PWABuilder limitado | `PROGRESSO:68` | Decidir: TWA MVP vs Capacitor v2 |
-| L4.5 | Beta track interno (20 testers) + crash reports | Faltava | 0 crash em 3 dias |
+| # | Task | Aceite | Status |
+|---|------|--------|--------|
+| L4.1 | TWA via PWABuilder | APK instala standalone | ⏳ pré-requisitos ok (manifest completo, SW, ícones) |
+| L4.2 | Assets loja | Play Console sem warnings | ⏳ |
+| L4.3 | Contas dev | — | decisão do dono |
+| L4.4 | Monetização | TWA MVP vs Capacitor v2 | decisão do dono |
+| L4.5 | Beta track | 0 crash em 3 dias | ⏳ |
 
-## FASE 5 — v2 (Capacitor + OAuth público externo)
+## FASE 5 — v2 (OAuth público externo)
 
-> Google Cloud avisa ao sair de `Testing` → `External` que precisa verificação. Anotar para quando publicar fora dos test users.
-
-| # | Task | Onde | Aceite |
-|---|------|------|--------|
-| V5.1 | **OAuth consent screen → External**: `Google Cloud → OAuth consent screen → User Type: External` → App name `NoteThread`, User support e-mail, App logo `icon-1024.png`, App domain `https://SEUAPP.vercel.app`, Authorized domains `vercel.app` + `supabase.co`, Dev e-mail | Cloud Console | Status `In production` |
-| V5.2 | **Scopes + Test users**: enquanto `Testing`, adicionar `test users` (`Supabase → Auth → Users`); para `External` solicitar `email` `profile` `openid` (não sensível, sem verificação extensa) | Cloud Console | Sem `Access blocked` |
-| V5.3 | **Domínio + Privacy**: publicar `public/privacy.html` + `public/terms.html` e colar URLs em `OAuth consent → Privacy policy / Terms of service` + `Authorized domains` | `public/privacy.html:1` | URLs válidas, Google aprova |
-| V5.4 | **Supabase URLs prod**: `Supabase → Authentication → URL Configuration → Site URL = https://SEUAPP.vercel.app` + `Additional Redirect URLs = https://SEUAPP.vercel.app/*` + `https://dcttsnttbtsvpnfwtoaj.supabase.co/auth/v1/callback` já em `Google → Authorized redirect URI` | Supabase | Login Google não dá `redirect_uri_mismatch` |
-| V5.5 | **Publicar App Google**: `OAuth consent → Publish App` → se pedir verificação, enviar para Google (leva 3-7 dias) — sem isso limite 100 contas teste | Cloud Console | `Published` |
-| V5.6 | **Capacitor v2**: migrar TWA → `npx cap add android`, `AdMob` + `Play Billing`, `splash` nativo, `push` | `L4.4` | AAB na Play |
-
-## FASE 6 — Melhorias de produto & arquitetura (backlog priorizado)
-
-> Levantamento 21/08/2026 após estabilização v1. Ordem = impacto ÷ esforço.
-
-### Produto (diferencial visível)
-
-| # | Task | Detalhe | Aceite |
-|---|------|---------|--------|
-| P6.1 | ✅ **Busca com filtros** | Implementado `7a86cd5`: `in:trabalho` (conversa), `#tag`, `depois:YYYY-MM-DD`, `antes:YYYY-MM-DD` + chips no contador + placeholder. Ex: `in:trabalho #urgente depois:2026-01-01` | ✅ Filtros funcionam |
-| P6.2 | ✅ **Backlinks/menções** | Concluído `f29aa7a`: `@` autocomplete + token `@[Nome](t:id)` + chip navegável + seção "Mencionado em" na thread citada (scan de notas) | ✅ Bidirecional |
-| P6.3 | ✅ **Lembretes/notifications** | Implementado `73a38e7`: "Lembrar-me" no menu ▾ (datetime), colunas `remind_at/remind_fired`, scheduler 20s + Notification API + toast, badge ⏰ no explorador. Push com app fechado → v2 Capacitor (`V5.6`) | ✅ Notificação dispara com app aberto |
-
-### Arquitetura (dívida que cobra juros)
-
-| # | Task | Detalhe | Aceite |
-|---|------|---------|--------|
-| A6.4 | ✅ **Quebrar o `app.js`** | Concluído `775e540`: 18 ES Modules (`js/*` + `js/ui/*`). Onda 1 `a9a2c70` (1.270 linhas) + Onda 2 `775e540` extraiu `settings/auth/tree/composer/sync-events` → `app.js` final **195 linhas**, todos <500. Sem build step, `sw.js v33` precacheia todos, e2e 2/2 verde | ✅ Sem bundler; e2e verde |
-| A6.5 | ✅ **Remover o legado** | Removido `17cdd5d`: `server/*` (www/sync/index/static/start), `Procfile`, `attachtest.js`, `WSSync`/`SYNC_URL` no app.js, dep `ws`. Sync = SupaSync direto; sem config → offline honesto | ✅ Deletado; deploy verde |
-| A6.6 | ✅ **Testes do fluxo real** | Implementado `17cdd5d`: Playwright + servidor estático zero-dep. 2 specs verdes: (1) criar thread → nota com checkbox → marcar → reload → persiste; (2) menção `@` → token → chip → navegação. Roda no CI (`ci.yml`) | ✅ `npm run e2e` verde local e CI |
-
-### Robustez
-
-| # | Task | Detalhe | Aceite |
-|---|------|---------|--------|
-| R6.7 | ✅ **Imagens em Storage** | Implementado `8a2ce32`: bucket `note-images` (public, RLS) + upload `5MB` via `supabase.storage` em `composer.js`, fallback `base64` offline. Snapshot não carrega bytes | ✅ Storage com fallback |
-| R6.8 | ✅ **Paginação real no servidor** | Implementado `5608d07`: `SupaSync.fetchNotesPage` com `.range()` + `setupInfiniteScroll` busca no Supabase quando local esgotado, fallback offline | ✅ Thread com 5k notas abre rápido |
-| R6.9 | ✅ **PWA update UX** | Implementado `5608d07`: toast busca `CHANGELOG.md` e mostra 2 itens da última versão antes de recarregar | ✅ "What's new" no toast |
+> Sem mudança desde 21/08 — tasks V5.1–V5.5 (publicar OAuth consent screen, scopes, domínios, URLs Supabase) continuam válidas para quando sair do Testing. V5.6 Capacitor depende de L4.4.
 
 ---
 
-## Ordem recomendada
+## FASE 6 — Melhorias de produto & arquitetura
 
-1. **Fase 0** (infra) → já permite testar APK local com `wss`.
-2. **Fase 1** (BD+Auth) → sem isso, perde dados e vaza isolamento.
-3. **Fase 3A+3B** + **W2.1** → mobile instalável.
-4. **Fase 2** (CI+testes) em paralelo → garante regressão.
-5. **Fase 4** → loja (TWA).
-6. **Fase 5** → v2 externo (OAuth publicado + Capacitor).
-7. **Fase 6** → produto/arquitetura (P6.1–R6.9), em paralelo ou pós-v2.
+> Levantamento 21/08, re-auditado 24/08. Ordem = impacto ÷ esforço.
+
+### Produto (diferencial visível)
+
+| # | Task | Detalhe | Status |
+|---|------|---------|--------|
+| P6.1 | ✅ Busca com filtros | `in:` `#tag` `depois:` `antes:` + chips | ✅ |
+| P6.2 | ✅ Backlinks/menções | `@[Nome](t:id)` + dropdown "Mencionado em" no nome da nota (popover dedicado) | ✅ evoluiu: agora fica no menu do título |
+| P6.3 | ✅ Lembretes/notifications | datetime + scheduler + Notification API + badge + clique na notificação abre a thread (SW `notificationclick`) | ✅ push com app fechado segue v2 |
+
+### Arquitetura
+
+| # | Task | Status |
+|---|------|--------|
+| A6.4 | ✅ Quebrar app.js em 18 ES Modules | ✅ |
+| A6.5 | ✅ Remover legado server/* | ✅ |
+| A6.6 | ✅ Testes do fluxo real (Playwright e2e no CI) | ✅ |
+
+### Robustez
+
+| # | Task | Status |
+|---|------|--------|
+| R6.7 | ✅ Imagens em Supabase Storage + fallback base64 | ✅ |
+| R6.8 | ✅ Paginação real (.range + infinite scroll) | ✅ |
+| R6.9 | ✅ PWA update UX ("what's new" no toast via CHANGELOG) | ✅ |
+
+### Novo (24/08) — acessibilidade e motion
+
+| # | Task | Detalhe | Status |
+|---|------|---------|--------|
+| Q6.10 | ✅ Acessibilidade HIGH | Contraste ≥4.5:1 nos 7 temas, zoom habilitado, aria-labels icon-only, labels login — commit `0fd7230` | ✅ |
+| Q6.11 | ⏳ Motion design | Identidade de movimento + 9 fixes + 9 oportunidades — ver `docs/MOTION_DESIGN.md` | planejado |
+| Q6.12 | ⏳ UI polish restante | Botões unificados, touch targets, focus trap, skeleton — ver `docs/UI_UX_MELHORIAS.md` | planejado |
+
+---
+
+## Ordem recomendada (atualizada)
+
+1. ~~Fase 0~~ / ~~Fase 1~~ — ✅ feitas pela pilha Vercel+Supabase.
+2. **M3.4 touch targets** (único item crítico mobile restante) + focus trap no modal.
+3. Re-teste device real 375×812 (checklist `MOBILE_TASKS.md`).
+4. Medir **Lighthouse PWA + Performance** (W2.6) — único gate sem evidência.
+5. Fase 4 loja (TWA).
+6. Fase 5 v2 externo quando for publicar fora dos test users.
+7. Fase 6 melhorias (Q6.11/Q6.12) em paralelo.
 
 ## Como validar
 
 ```bash
-npm start                          # :3000 health ok
-# 2 abas mesmo e-mail: nota A → B realtime
-# DevTools Lighthouse: PWA ≥90
+npm run dev                        # :3001 (ou porta livre que serve escolher)
+npm run check                      # node --check em todo JS público
+npm run test                       # node:test (inclui assertion da versão do SW)
+npm run e2e                        # Playwright: fluxo nota + menção
+# Lighthouse (PWA + Performance) na URL de produção
 # Playwright viewport 375×812: long-press bolha + long-press thread + swipe
-# Render restart: notas persistem
 ```
 
 ## Referências cruzadas
 
 - Auditoria completa mobile: `docs/MOBILE_TASKS.md`
 - Histórico do que já funciona: `docs/PROGRESSO.md`
+- Design tokens: `docs/DESIGN_TOKENS.md`
+- UI/UX diagnóstico: `docs/UI_UX_MELHORIAS.md`
+- Motion design: `docs/MOTION_DESIGN.md`
 - Entry-point: `README.md`

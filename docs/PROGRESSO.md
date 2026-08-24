@@ -1,6 +1,7 @@
-# NoteThread — Progresso (snapshot 17/08/2026)
+# NoteThread — Progresso (snapshot histórico)
 
 > **⚠️ Este arquivo é histórico.** O checklist atual de lançamento está em **[ROADMAP_ESTAVEL.md](ROADMAP_ESTAVEL.md)** — use-o como fonte da verdade para web+mobile estável.
+> Atualizado em 24/08/2026 para refletir a arquitetura atual (Vercel + Supabase; backend Node próprio removido).
 
 ## 1. Origem
 
@@ -8,47 +9,38 @@ App reconstruído localmente via Ctrl+C/V de plataforma que não permitia export
 
 ## 2. O que JÁ FUNCIONA ✅
 
-**Frontend (PWA, JS puro)** — `public/` com `index.html`, `app.js` (~1959 linhas), `styles.css`, `sw.js` (`notethread-v8`), `manifest.webmanifest`, `icon-192/512.png`, `icon.svg`. Login mock, threads chat, lazy `PAGE_SIZE=25`, Markdown, 6 temas + Auto, sons `cuelume`, busca global, pastas/árvore IDE, favoritos, pin/drag-and-drop, lightbox, offline-first `localStorage`.
+**Frontend (PWA, JS puro, ES Modules)** — `public/` com `index.html`, `app.js` (entry ~195 linhas) + 18 módulos em `js/` e `js/ui/`, `styles.css`, `sw.js` (`notethread-v70`, CSS/JS network-first), `manifest.webmanifest` (ícones 192/512/1024 maskable + SVG), Google OAuth via Supabase, threads chat, paginação real (Supabase `.range()` + infinite scroll), Markdown + checklists interativos, 7 temas + Auto com `theme-color` dinâmico, sons customizáveis + haptic, busca global com filtros (`in:` `#tag` `depois:` `antes:`), pastas/árvore IDE com drag & drop, favoritos, pin + jump-to-note, backlinks/menções `@[Nome](t:id)`, lembretes com Notification API (clique na notificação abre a thread), imagens no Supabase Storage com fallback base64, lightbox com pinch-to-zoom, pull-to-refresh, offline queue.
 
-**Backend (Node + `ws`)** — `server/www.js` servidor único (estático+WS mesma porta `PORT`), `server/sync.js` broadcast por `userId` + `data.json`, `server/start.js` wrapper. Protocolo `hello→snapshot`, `note:upsert/edit/delete/pin/reorder/tags`, `thread:upsert/delete/move`, `folder:upsert/delete`.
+**Backend (zero servidor próprio)** — Vercel estático (`vercel.json`: CSP/X-Frame headers, cache-control do SW) + Supabase: Postgres com RLS por `auth.uid()`, Auth Google OAuth, Storage bucket `note-images`, Realtime.
 
-**Validado** — `npm start` :3000 `200` + `health` ok; sync realtime PC→celular mesmo e-mail.
+**Qualidade** — CI GitHub Actions (`check` + `test` + e2e Playwright), node:test unit (8 specs incl. assertion da versão do SW), e2e do fluxo real (criar nota com checklist → persiste; menção → navegação), `privacy.html` + `terms.html`, `CHANGELOG.md` com "what's new" no toast de update.
 
 ## 3. Correções feitas na reconstrução
 
 | # | Problema | Solução |
 |---|----------|---------|
 | 1 | `index.html` faltando | Movido para `public/index.html` |
-| 2 | `npm start` quebrado | `package.json:6` → `node server/start.js` |
-| 3 | Sync isolava por device | `hello` agora usa `mail` como chave |
-| 4 | Não deployável em host único | `server/www.js` frontend+WS mesma porta |
-| 5 | `SYNC_URL` fixa `:3001` | `app.js:24` mesma origem + `window.NOTE_THREAD_SYNC_URL` |
-| 6 | Ícones PWA ausentes | Gerados `icon-192/512.png` placeholders |
-| 7 | Sem `.gitignore`/`Procfile` | Adicionados |
+| 2 | Sync isolava por device | Chave por conta (agora `user_id` RLS no Supabase) |
+| 3 | Ícones PWA ausentes | Gerados; hoje 1024px maskable final |
+| 4 | Sem `.gitignore` | Adicionado |
 
 ## 4. O que falta → ver ROADMAP
 
-Todo o planejamento de **host, BD, auth real, PWA, CI, loja** foi movido para **[ROADMAP_ESTAVEL.md](ROADMAP_ESTAVEL.md) (Fases 0–4)**.
+Planejamento completo (loja/TWA, OAuth externo, Capacitor v2, melhorias de produto e motion design) está em **[ROADMAP_ESTAVEL.md](ROADMAP_ESTAVEL.md)**.
 
-Resumo antigo (mantido para contexto):
-
-- **A.** Push GitHub (`No commits yet`, `origin garchel/NoteThread`)
-- **B.** Hospedar backend (Render, `npm start`) — risco `data.json` volátil → BD
-- **C.** APK via PWABuilder (já PWA-ready, mas ícones placeholder)
-- **D.** Lojas + monetização (AdMob/Billing exigem Capacitor)
+Resumo: TWA/PWABuilder pendente; touch targets ≥44px é o único item crítico mobile restante; Lighthouse baseline ainda não medido.
 
 ## 5. Arquivos importantes
 
-- `public/index.html:221` bloco `NOTE_THREAD_SYNC_URL` para prod
-- `public/app.js` Store offline-first + Sync + Sound + UI
-- `public/sw.js` `notethread-v8`
-- `server/www.js` prod · `server/sync.js` núcleo · `server/index.js` legado
+- `public/app.js` — entry que importa os módulos UI
+- `public/js/store.js` — Store offline-first · `js/sync-supabase.js` — sync
+- `public/js/ui/*.js` — auth, composer, messages, navigation, settings, tree…
+- `public/sw.js` — precache v70 (bump pareado com `tests/sync.test.js`)
+- `vercel.json` — headers de segurança e cache
+- `supabase.sql` — schema + RLS
 
 ## 6. Decisões pendentes (dono)
 
-- [ ] Host (Render/Railway/VPS) e BD já de início?
-- [ ] Ícones/nome definitivos?
-- [ ] Monetização (ads/IAP) e migração Capacitor?
-- [ ] Limpar `attachtest.js`, `icon.svg` raiz duplicado, `server/static.js` legado
-
-> Ver **[ROADMAP_ESTAVEL.md](ROADMAP_ESTAVEL.md)** para checklist priorizado.
+- [ ] Contas de dev (Play US$25 / Apple US$99)
+- [ ] Monetização (ads/IAP → decide TWA MVP vs Capacitor v2)
+- [ ] Publicar OAuth consent screen como External (Fase 5)

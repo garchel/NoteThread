@@ -277,9 +277,9 @@ body::before {
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
-/* App container cozy */
+/* App container cozy — agora 2 colunas (explorer + canvas) */
 .app {
-  display: grid; grid-template-columns: var(--nav-w) var(--sidebar-w) 1fr;
+  display: grid; grid-template-columns: var(--sidebar-w) 1fr;
   height: calc(100vh - 32px); margin: 16px;
   background: var(--bg-explorer);
   border-radius: var(--radius-lg);
@@ -287,12 +287,23 @@ body::before {
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-light);
 }
-/* Proporção de contraste 60/30/10 entre as superfícies:
-   área principal (60%, mais clara) > explorer (30%) > nav (10%, mais escura).
-   Cada tema define --surf-nav/--surf-explorer/--surf-chat com essa hierarquia. */
-.nav-bar { background: var(--surf-nav, var(--bg-nav)); }
 .sidebar { background: var(--surf-explorer, var(--bg-explorer)); }
 .chat { background: var(--surf-chat, var(--bg-chat)); }
+.explorer-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 14px 10px; border-bottom: 1px solid var(--border-light);
+}
+.brand-mark { width: 36px; height: 36px; background: #fff; border-radius: 10px; display: grid; place-items: center; font-size: 18px; box-shadow: var(--shadow-sm); }
+.brand-text { flex: 1; min-width: 0; }
+.brand-name { font-weight: 800; font-size: 15px; letter-spacing: -.3px; }
+.brand-sub { font-size: 11px; color: var(--text-dim); }
+.profile-btn {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  background: transparent; border: none; cursor: pointer; padding: 8px; border-radius: 12px;
+  text-align: left; transition: background .12s;
+}
+.profile-btn:hover { background: var(--bg); }
+.profile-popover { min-width: 200px; }
 
 /* ===================== AUTH ===================== */
 .auth-screen {

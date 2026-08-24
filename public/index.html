@@ -54,21 +54,17 @@
   </div>
 
   <!-- ===== APP COZY ===== -->
-  <div id="app" class="app hidden" data-friendly-name="App Container (Grid 3 Colunas)">
-    <!-- Nav lateral fina -->
-    <nav id="nav-bar" class="nav-bar" aria-label="Navegação rápida" data-friendly-name="Nav: Barra Lateral Fina">
-      <div class="nav-top">
-        <div class="nav-logo" title="NoteThread" data-friendly-name="Nav: Logo">🧵</div>
-        <button class="nav-btn" title="Buscar (Ctrl/⌘+K)" id="nav-search" data-friendly-name="Nav: Busca"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
-        <button class="nav-btn" title="Lembretes pendentes" id="nav-reminders" data-friendly-name="Nav: Lembretes"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nav-badge hidden" id="rem-badge"></span></button>
-      </div>
-      <div class="nav-bottom">
-        <button class="nav-btn" title="Configurações" id="nav-settings" data-friendly-name="Nav: Configurações"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
-      </div>
-    </nav>
-
+  <div id="app" class="app hidden" data-friendly-name="App Container (Grid 2 Colunas)">
     <!-- Explorer -->
     <aside id="sidebar" class="sidebar" data-friendly-name="Painel do Explorador (Sidebar Secundária)">
+      <div class="explorer-brand" data-friendly-name="Marca NoteThread">
+        <div class="brand-mark">🧵</div>
+        <div class="brand-text">
+          <div class="brand-name">NoteThread</div>
+          <div class="brand-sub">Suas ideias, organizadas</div>
+        </div>
+        <button id="explorer-reminders" class="btn-icon-sm" title="Lembretes" aria-label="Lembretes" data-friendly-name="Explorer: Lembretes"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="nav-badge hidden" id="rem-badge"></span></button>
+      </div>
       <div class="search-box" data-friendly-name="Campo de Busca (Busca)">
         <span class="search-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
         <input id="search-input" type="search" placeholder="Buscar notas…  #tag · in:caderno" autocomplete="off" />
@@ -91,17 +87,23 @@
       <div id="tree" class="tree" data-friendly-name="Lista de Cadernos"></div>
 
       <footer id="sidebar-footer" class="sidebar-footer" data-friendly-name="Rodapé do Explorador (Avatar Ana Silva)">
-        <img id="me-avatar-img" class="avatar-img hidden" alt="Avatar" />
-        <div class="avatar" id="me-avatar">A</div>
-        <div class="me-info">
-          <div class="me-name" id="me-name">Ana Silva</div>
-          <div class="me-mail" id="me-mail">ana@notethread.app</div>
-        </div>
+        <button id="profile-btn" class="profile-btn" aria-label="Menu do perfil" data-friendly-name="Perfil: menu">
+          <img id="me-avatar-img" class="avatar-img hidden" alt="Avatar" />
+          <div class="avatar" id="me-avatar">A</div>
+          <div class="me-info">
+            <div class="me-name" id="me-name">Ana Silva</div>
+            <div class="me-mail" id="me-mail">ana@notethread.app</div>
+          </div>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;opacity:.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
         <div class="footer-actions">
           <button id="sync-status" class="sync-status offline" title="Status"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg></button>
-          <button id="btn-logout" class="btn-link" title="Sair"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
         </div>
       </footer>
+      <div id="profile-popover" class="popover profile-popover hidden" role="menu">
+        <button id="profile-config" data-act="config"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg> Configurações</button>
+        <button id="profile-logout" data-act="logout" class="danger"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sair</button>
+      </div>
     </aside>
 
     <!-- Canvas -->

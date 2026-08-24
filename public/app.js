@@ -44,22 +44,46 @@ async init() {
       this.bindThreadTitle();
       this.bindSync();
       this.bindContextMenu();
-      // Nav cozy
-      // Busca: foca o campo da sidebar e rola até ele
-      const navSearch = $('#nav-search'); if (navSearch) navSearch.addEventListener('click', () => {
-        const si = $('#search-input');
-        if (si) { si.focus(); si.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-      });
-      // Lembretes: página no canvas (ocupa área principal)
-      const navRem = $('#nav-reminders');
-      if (navRem) {
-        navRem.addEventListener('click', () => this.showRemindersPage());
+      // Explorer: lembretes no header
+      const expRem = document.getElementById('explorer-reminders');
+      if (expRem) {
+        expRem.addEventListener('click', () => this.showRemindersPage());
         const backRem = document.getElementById('reminders-back');
         if (backRem) backRem.addEventListener('click', () => this.hideRemindersPage());
         this.updateRemBadge();
       }
       const backSearch = document.getElementById('search-back');
       if (backSearch) backSearch.addEventListener('click', () => this.hideSearchPage());
+      // Perfil popover
+      const profileBtn = document.getElementById('profile-btn');
+      const profilePop = document.getElementById('profile-popover');
+      if (profileBtn && profilePop) {
+        profileBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          profilePop.classList.toggle('hidden');
+          // posiciona acima do footer
+          const r = profileBtn.getBoundingClientRect();
+          const pw = 200, ph = 100;
+          let left = r.left;
+          let top = r.top - ph - 8;
+          if (top < 8) top = r.bottom + 8;
+          profilePop.style.left = left + 'px';
+          profilePop.style.top = top + 'px';
+        });
+        document.addEventListener('click', (e) => {
+          if (!profilePop.contains(e.target) && !profileBtn.contains(e.target)) profilePop.classList.add('hidden');
+        });
+        document.getElementById('profile-config')?.addEventListener('click', () => {
+          profilePop.classList.add('hidden');
+          this.toggleSettingsPopover();
+        });
+        document.getElementById('profile-logout')?.addEventListener('click', async () => {
+          const supa = this._getSupa && this._getSupa();
+          if (supa) try { await supa.auth.signOut(); } catch {}
+          Store.setUser(null); this.renderAuthOrApp();
+          profilePop.classList.add('hidden');
+        });
+      }
       // (o toggle do popover de configurações é ligado em bindSettings, ancorado no #nav-settings)
       this.bindModal();
       this.bindMsgPopover();

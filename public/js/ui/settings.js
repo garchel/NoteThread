@@ -235,15 +235,21 @@ handleSetting(act, val) {
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'notethread.json'; a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 1000);
       } else if (act === 'clear') {
-        if (confirm('Apagar TODAS as conversas, pastas e notas? Esta ação não pode ser desfeita.')) {
+        const body = `<p style="font-size:14px;line-height:1.55;color:var(--text)">Tem certeza que deseja apagar <b>TODAS</b> as conversas, cadernos e notas?</p>
+          <p style="font-size:13px;color:var(--text-dim);margin-top:8px">Esta ação não pode ser desfeita e afetará todos os dispositivos sincronizados.</p>`;
+        this.showModal('Apagar tudo', body, () => {
           Store.data.threads = {}; Store.data.folders = {}; Store.data.notes = {}; Store.save();
           this.activeThread = null; this.renderedClientIds = new Set(); this.oldestTs = null;
           $('#chat-name').textContent = 'Selecione uma conversa'; $('#messages').querySelectorAll('.bubble,.day-sep').forEach((n) => n.remove());
           $('#empty-state').classList.remove('hidden'); this.dom.btnPin.classList.add('hidden');
           this.setChatActiveUi(false);
           this.renderTree();
+          this.closeModal();
           this.dom.settingsPopover.classList.add('hidden');
-        }
+        });
+        const okBtn2 = this.dom.modalOk;
+        okBtn2.classList.add('btn-danger');
+        okBtn2.textContent = 'Apagar tudo';
       } else if (act === 'reconnect') {
         try { if (Sync.ws) Sync.ws.close(); } catch {}
         Sync.connect();

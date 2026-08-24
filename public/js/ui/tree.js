@@ -1,5 +1,5 @@
 import { uid, now, esc, haptic, $ } from '../utils.js';
-import { ICON, wrapSvg } from '../icons.js';
+import { ICON, wrapSvg, COLOR_PALETTE, colorById, glyphSvg, GLYPH_ICONS } from '../icons.js';
 import { Store } from '../store.js';
 import { Sync } from '../sync-supabase.js';
 import { Sound } from '../sound.js';
@@ -12,16 +12,19 @@ bindTreeActions() {
     },
 
 createThread() {
-      let chosen = '💬';
+      let chosen = 'chat'; // id do ícone vetorial (GLYPH_ICONS)
+      let chosenColor = null;
       const body = `
         <label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Nome da conversa</label>
         <input id="nt-name" type="text" placeholder="ex: Ideias de Projetos, Tarefas Diárias…" autofocus />
+        <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Cor</label>
+        ${this._colorSwatchesHTML('nt', null)}
         <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Ícone</label>
-        <div class="ep">${this._pickerHTML('nt', chosen)}</div>`;
+        <div id="nt-glyphs">${this._glyphPickerHTML('nt', chosen)}</div>`;
       this.showModal('Nova conversa', body, () => {
         const v = ($('#nt-name').value || '').trim();
         if (!v) { $('#nt-name').focus(); return; }
-        const t = { id: uid(), name: v, emoji: chosen, folderId: this.activeFolderContext || null, favorite: false, createdAt: now(), updatedAt: now(), lastPreview: '', userId: Store.user ? Store.user.mail : 'anon' };
+        const t = { id: uid(), name: v, emoji: chosen, color: chosenColor || undefined, folderId: this.activeFolderContext || null, favorite: false, createdAt: now(), updatedAt: now(), lastPreview: '', userId: Store.user ? Store.user.mail : 'anon' };
         Store.upsertThread(t);
         Sync.send('thread:upsert', t);
         this.renderTree();
@@ -29,21 +32,25 @@ createThread() {
         Sound.play('create'); haptic('success');
         this.openThread(t.id);
       });
-      this._bindPicker('nt', '💬', (e) => { chosen = e; });
+      this._bindColorSwatches('nt', null, (c) => { chosenColor = c; });
+      this._bindGlyphPicker('nt', (g) => { chosen = g; });
       setTimeout(() => $('#nt-name') && $('#nt-name').focus(), 50);
     },
 
 createFolder() {
-      let chosen = '📁';
+      let chosen = 'folder';
+      let chosenColor = null;
       const body = `
         <label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Nome da pasta</label>
         <input id="nf-name" type="text" placeholder="ex: Trabalho, Pessoal, Estudos…" autofocus />
+        <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Cor</label>
+        ${this._colorSwatchesHTML('nf', null)}
         <label style="display:block;font-size:13px;color:var(--text-dim);margin:14px 0 6px;font-weight:600">Ícone</label>
-        <div class="ep">${this._pickerHTML('nf', chosen)}</div>`;
+        <div id="nf-glyphs">${this._glyphPickerHTML('nf', chosen)}</div>`;
       this.showModal('Nova pasta', body, () => {
         const v = ($('#nf-name').value || '').trim();
         if (!v) { $('#nf-name').focus(); return; }
-        const f = { id: uid(), name: v, emoji: chosen, parentId: null, createdAt: now(), userId: Store.user ? Store.user.mail : 'anon' };
+        const f = { id: uid(), name: v, emoji: chosen, color: chosenColor || undefined, parentId: null, createdAt: now(), userId: Store.user ? Store.user.mail : 'anon' };
         Store.upsertFolder(f);
         Store.setExpanded(f.id, true);
         Sync.send('folder:upsert', f);
@@ -51,7 +58,8 @@ createFolder() {
         Sound.play('create'); haptic('success');
         this.renderTree();
       });
-      this._bindPicker('nf', '📁', (e) => { chosen = e; });
+      this._bindColorSwatches('nf', null, (c) => { chosenColor = c; });
+      this._bindGlyphPicker('nf', (g) => { chosen = g; });
       setTimeout(() => $('#nf-name') && $('#nf-name').focus(), 50);
     },
 
@@ -96,7 +104,14 @@ folderNode(f) {
       row.className = 'tnode folder-node' + (expanded ? '' : ' collapsed');
       row.dataset.fid = f.id;
       row.setAttribute('draggable', 'true');
-      row.innerHTML = `<span class="twist">${wrapSvg(ICON.chevron, 10)}</span><span class="ico">${wrapSvg(ICON.folder, 15)}</span>
+      // ícone grande colorido (mesmo estilo dos cadernos); cor salva ou hash
+      // estilos inline: independem do styles.css (cache-proof)
+      const fcol = this._cadernoColor(f);
+      const fglyph = glyphSvg(f.emoji);
+      const fInner = fglyph || esc(f.emoji || '📁');
+      const isGlyphF = !!fglyph;
+      const fico = `<span class="caderno-ico" style="width:52px;height:52px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;background:${fcol.bg};color:${fcol.fg};font-size:${isGlyphF ? '0' : '22px'};box-shadow:var(--shadow-sm)">${isGlyphF ? fInner.replace('<svg ', '<svg style="width:26px;height:26px" ') : fInner}</span>`;
+      row.innerHTML = `<span class="twist">${wrapSvg(ICON.chevron, 10)}</span><span class="ico">${fico}</span>
                        <span class="label">${esc(f.name)}</span><span class="count">${kids.length || ''}</span>`;
       row.addEventListener('click', () => {
         const v = !Store.isExpanded(f.id);
@@ -129,38 +144,51 @@ folderNode(f) {
       if (!expanded) children.style.maxHeight = '0px';
       kids.forEach((t) => children.appendChild(this.threadNode(t, 1)));
       if (!kids.length) {
-        const empty = document.createElement('div');
-        empty.className = 'tnode';
-        empty.style.opacity = '.5'; empty.style.fontSize = '13px'; empty.style.paddingLeft = '34px';
-        empty.textContent = 'sem conversas';
+        // estado vazio da pasta: ícone + texto + ação direta de criar nota
+        const empty = document.createElement('button');
+        empty.type = 'button';
+        empty.className = 'folder-empty';
+        empty.title = 'Criar uma anotação nesta pasta';
+        empty.innerHTML = `<span class="fe-ic">${wrapSvg(ICON.plus, 14)}</span>
+                           <span class="fe-text"><strong>Pasta vazia</strong><small>Clique para criar a primeira anotação</small></span>`;
+        empty.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.activeFolderContext = f.id;
+          this.createThread();
+          this.activeFolderContext = null;
+        });
         children.appendChild(empty);
       }
       wrap.appendChild(children);
       return wrap;
     },
 
+    _colorSwatchesHTML(prefix, selectedId) {
+      return `<div class="color-swatches" id="${prefix}-colors">` +
+        COLOR_PALETTE.map((c) => `<button type="button" class="color-swatch${c.id === selectedId ? ' sel' : ''}" data-color="${c.id}" style="background:${c.bg}" title="${c.id}" aria-label="Cor ${c.id}"></button>`).join('') +
+        `</div>`;
+    },
+    _bindColorSwatches(prefix, initialId, onPick) {
+      const root = $(`#${prefix}-colors`);
+      if (!root) return;
+      let current = initialId;
+      root.querySelectorAll('.color-swatch').forEach((b) => b.addEventListener('click', () => {
+        root.querySelectorAll('.color-swatch.sel').forEach((x) => x.classList.remove('sel'));
+        b.classList.add('sel');
+        current = b.dataset.color;
+        onPick(current);
+      }));
+      return () => current;
+    },
     _cadernoColor(t) {
-      const palette = [
-        { bg: '#FFF3D9', fg: '#E28D42' },
-        { bg: '#E3F0FA', fg: '#589B99' },
-        { bg: '#E6F2F2', fg: '#589B99' },
-        { bg: '#FFF0E0', fg: '#E28D42' },
-        { bg: '#F0E6FF', fg: '#7c5cff' },
-        { bg: '#E0F5E9', fg: '#589B99' },
-      ];
+      // cor escolhida pelo usuário tem prioridade; senão, hash determinístico
+      const chosen = t.color && colorById(t.color);
+      if (chosen) return chosen;
+      const palette = COLOR_PALETTE;
       let hash = 0;
       const str = t.id + (t.emoji || t.name || '');
       for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
       return palette[hash % palette.length];
-    },
-    _cadernoHugeIcon(t) {
-      const n = (t.name || '').toLowerCase();
-      if (n.includes('ideia')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.5 1.2 4.7 3 6.2V18a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.8c1.8-1.5 3-3.7 3-6.2a7 7 0 0 0-7-7z"/></svg>';
-      if (n.includes('compra') || n.includes('mercado')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>';
-      if (n.includes('lembrete') || n.includes('importante')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
-      if (n.includes('trabalho') || n.includes('projeto')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>';
-      if (n.includes('rápida') || n.includes('rapida')) return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
-      return null;
     },
     threadNode(t, depth) {
       const el = document.createElement('div');
@@ -170,11 +198,14 @@ folderNode(f) {
       el.style.paddingLeft = (8 + depth * 16) + 'px';
       let ic;
       const col = this._cadernoColor(t);
-      const huge = this._cadernoHugeIcon(t);
-      if (huge) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${huge}</span>`;
-      else if (t.favorite) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${wrapSvg(ICON.star, 14)}</span>`;
-      else if (t.emoji) ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${esc(t.emoji)}</span>`;
-      else ic = `<span class="caderno-ico" style="background:${col.bg};color:${col.fg}">${wrapSvg(ICON.bubble, 14)}</span>`;
+      // ícone escolhido (glifo vetorial) > emoji legado > favorito > fallback
+      // estilos inline: independem do styles.css (cache-proof)
+      const tGlyph = t.emoji && glyphSvg(t.emoji);
+      const icoBase = `width:52px;height:52px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;background:${col.bg};color:${col.fg};font-size:22px;box-shadow:var(--shadow-sm)`;
+      if (tGlyph) ic = `<span class="caderno-ico" style="${icoBase};font-size:0">${tGlyph.replace('<svg ', '<svg style="width:26px;height:26px" ')}</span>`;
+      else if (t.favorite) ic = `<span class="caderno-ico" style="${icoBase}">${wrapSvg(ICON.star, 20)}</span>`;
+      else if (t.emoji) ic = `<span class="caderno-ico" style="${icoBase}">${esc(t.emoji)}</span>`;
+      else ic = `<span class="caderno-ico" style="${icoBase};font-size:0">${glyphSvg('chat').replace('<svg ', '<svg style="width:26px;height:26px" ')}</span>`;
       const noteCount = Store.notesFor(t.id).length;
       const countEl = noteCount ? `<span class="note-count" title="${noteCount} nota${noteCount !== 1 ? 's' : ''}">${noteCount}</span>` : '';
       // badge ⏰ se a thread tem lembrete pendente
@@ -268,35 +299,68 @@ openThreadMenu(e, t) {
       e.stopPropagation();
     },
 
-openFolderMenu(e, f) {
-      // menu simples de pasta: renomear / excluir
+    openFolderMenu(e, f) {
       const m = this.dom.ctx;
       m.innerHTML = `<button data-act="rename-folder">✎ Renomear pasta</button>
-                     <button data-act="delete-folder" class="danger">🗑 Excluir pasta</button>`;
+                     <button data-act="delete-folder" class="danger">🗑 Excluir caderno</button>`;
       m.classList.remove('hidden');
       m.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
       m.style.top = Math.min(e.clientY, window.innerHeight - 160) + 'px';
       m.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
         const act = b.dataset.act;
-        if (act === 'rename-folder') {
-          const n = prompt('Renomear pasta', f.name); if (n) { f.name = n.trim(); Store.upsertFolder(f); Sync.send('folder:upsert', f); this.renderTree(); }
-        } else if (act === 'delete-folder') {
-          if (confirm(`Excluir "${f.name}"? As conversas dentro voltam para a raiz.`)) {
-            Store.deleteFolder(f.id, false); Sync.send('folder:delete', { id: f.id }); this.renderTree();
-          }
-        }
+        if (act === 'rename-folder') this.renameFolder(f.id);
+        else if (act === 'delete-folder') this.confirmDeleteFolder(f.id);
         m.classList.add('hidden');
       }));
       e.stopPropagation();
     },
+    renameFolder(id) {
+      const f = Store.getFolder(id); if (!f) return;
+      const body = `<label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Novo nome do caderno</label>
+        <input id="rename-folder-input" type="text" value="${esc(f.name)}" autofocus />`;
+      this.showModal('Renomear caderno', body, () => {
+        const v = ($('#rename-folder-input').value || '').trim();
+        if (!v) { $('#rename-folder-input').focus(); return; }
+        f.name = v; Store.upsertFolder(f); Sync.send('folder:upsert', f);
+        this.renderTree(); this.closeModal();
+      });
+      setTimeout(() => { const el = $('#rename-folder-input'); if (el) { el.focus(); el.select(); } }, 50);
+    },
+    confirmDeleteFolder(id) {
+      const f = Store.getFolder(id); if (!f) return;
+      const count = Store.threadList().filter(t => t.folderId === id).length;
+      const body = `
+        <p style="font-size:14px;line-height:1.55;color:var(--text)">Tem certeza que deseja excluir o caderno <b>"${esc(f.name)}"</b>?</p>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px">${count ? `${count} conversa${count !== 1 ? 's' : ''} dentro voltará${count !== 1 ? 'ão' : ''} para a raiz.` : 'Nenhuma conversa neste caderno.'} Esta ação não pode ser desfeita.</p>`;
+      this.showModal('Excluir caderno', body, () => {
+        Store.deleteFolder(f.id, false); Sync.send('folder:delete', { id: f.id });
+        this.renderTree(); this.closeModal();
+        Sound.play('delete'); haptic('delete');
+      });
+      const okBtn = this.dom.modalOk;
+      okBtn.classList.add('btn-danger');
+      okBtn.textContent = 'Excluir';
+    },
 
-handleCtx(act) {
+    renameThread(id) {
+      const t = Store.getThread(id); if (!t) return;
+      const body = `<label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;font-weight:600">Novo nome da conversa</label>
+        <input id="rename-thread-input" type="text" value="${esc(t.name)}" autofocus />`;
+      this.showModal('Renomear conversa', body, () => {
+        const v = ($('#rename-thread-input').value || '').trim();
+        if (!v) { $('#rename-thread-input').focus(); return; }
+        t.name = v; t.updatedAt = now(); Store.upsertThread(t); Sync.send('thread:upsert', t);
+        this.renderTree(); this.closeModal();
+        if (this.activeThread === id) $('#chat-name').textContent = v;
+      });
+      setTimeout(() => { const el = $('#rename-thread-input'); if (el) { el.focus(); el.select(); } }, 50);
+    },
+    handleCtx(act) {
       const id = this.ctxThreadId; const t = Store.getThread(id); if (!t) return;
       if (act === 'fav') this.toggleFavorite(id);
       else if (act === 'unfav') this.toggleFavorite(id);
-      else if (act === 'rename') {
-        const n = prompt('Renomear conversa', t.name); if (n) { t.name = n.trim(); t.updatedAt = now(); Store.upsertThread(t); Sync.send('thread:upsert', t); this.renderTree(); }
-      } else if (act === 'delete') {
+      else if (act === 'rename') this.renameThread(id);
+      else if (act === 'delete') {
         this.confirmDeleteThread(id);
       } else if (act === 'move') {
         const folders = Store.folderList();

@@ -2,16 +2,21 @@ import { $ } from '../utils.js';
 import { CUELUME_SOUNDS, Sound } from '../sound.js';
 import { Store } from '../store.js';
 import { Sync } from '../sync-supabase.js';
+import { buildPattern } from '../bg-patterns.js';
 
 export const SettingsMethods = {
 bindSettings() {
-      this.dom.btnSettings.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.toggleSettingsPopover();
-      });
+      // Botão de configurações da barra lateral (nav) — único gatilho do popover
+      const anchor = this.dom.navSettings || this.dom.btnSettings;
+      if (anchor) {
+        anchor.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleSettingsPopover();
+        });
+      }
       document.addEventListener('click', (e) => {
         const p = this.dom.settingsPopover;
-        if (!p.classList.contains('hidden') && !p.contains(e.target) && e.target !== this.dom.btnSettings) {
+        if (!p.classList.contains('hidden') && !p.contains(e.target) && !anchor?.contains(e.target)) {
           p.classList.add('hidden');
         }
       });
@@ -28,6 +33,19 @@ bindSettings() {
       const density = (Store.data && Store.data.ui && Store.data.ui.density) || 'comfortable';
       document.documentElement.dataset.density = density;
       p.querySelectorAll('[data-set="density"]').forEach((b) => b.classList.toggle('active', b.dataset.val === density));
+      // fonte salva (aplicada no boot para toda a interface)
+      const savedFont = (Store.data && Store.data.ui && Store.data.ui.fontFamily) || '';
+      if (savedFont) document.documentElement.style.setProperty('--app-font', savedFont);
+      // fundo padrão da área principal (aplicado no boot, com escala do glifo)
+      const savedBg = (Store.data && Store.data.ui && Store.data.ui.chatBgPattern) || '';
+      const savedScaleBoot = (Store.data && Store.data.ui && Store.data.ui.chatBgScale) || 1;
+      const chatEl = document.querySelector('.chat');
+      if (chatEl) {
+        if (savedBg) {
+          chatEl.dataset.bg = savedBg;
+          chatEl.style.setProperty('--pattern-image', buildPattern(savedBg, savedScaleBoot));
+        }
+      }
       // aplica o tema salvo (resolve "auto")
       this.applyTheme();
       // reage a mudanças de tema do sistema quando em "auto"
@@ -51,6 +69,108 @@ bindSettings() {
           Store.data.ui = Store.data.ui || {};
           Store.data.ui.hideDoneChecks = hd.checked; Store.save();
           if (this.activeThread) { this.renderedClientIds = new Set(); this.renderMessages(true); }
+        });
+      }
+      // ---- Cabeçalho: usar a cor do caderno ----
+      const hm = $('#hdr-match-color');
+      if (hm) {
+        hm.checked = !!(Store.data.ui && Store.data.ui.headerMatchColor);
+        hm.addEventListener('change', () => {
+          Store.data.ui = Store.data.ui || {};
+          Store.data.ui.headerMatchColor = hm.checked; Store.save();
+          if (this.activeThread) this.applyThreadHeaderColor(this.activeThread);
+        });
+      }
+      // ---- Fonte da interface ----
+      const fs = $('#font-select');
+      if (fs) {
+        const fsSaved = (Store.data.ui && Store.data.ui.fontFamily) || '';
+        fs.value = fsSaved;
+        if (fsSaved) document.documentElement.style.setProperty('--app-font', fsSaved);
+        const preview = $('#font-preview');
+        if (preview) preview.style.fontFamily = fsSaved || 'var(--app-font)';
+        fs.addEventListener('change', () => {
+          Store.data.ui = Store.data.ui || {};
+          Store.data.ui.fontFamily = fs.value;
+          Store.save();
+          document.documentElement.style.setProperty('--app-font', fs.value || '');
+          if (preview) preview.style.fontFamily = fs.value || 'var(--app-font)';
+        });
+      }
+      // ---- Fundo padrão da área principal ----
+      // O glifo escala DENTRO do tile fixo de 320px (gerado via JS): mudar o tamanho
+      // NÃO altera o espaçamento — não é zoom.
+      const bgWrap = $('#bg-patterns');
+      if (bgWrap) {
+        const chatEl = document.querySelector('.chat');
+        const applyPattern = (val, scale) => {
+          if (!chatEl) return;
+          if (val) chatEl.dataset.bg = val; else delete chatEl.dataset.bg;
+          if (val) chatEl.style.setProperty('--pattern-image', buildPattern(val, scale || 1));
+          else chatEl.style.removeProperty('--pattern-image');
+          bgWrap.querySelectorAll('.bg-pat').forEach((b) => b.classList.toggle('active', b.dataset.bg === val));
+        };
+        const savedPattern = (Store.data.ui && Store.data.ui.chatBgPattern) || '';
+        const savedScale = (Store.data.ui && Store.data.ui.chatBgScale) || 1;
+        applyPattern(savedPattern, savedScale);
+        bgWrap.querySelectorAll('.bg-pat').forEach((b) => b.addEventListener('click', () => {
+          Store.data.ui = Store.data.ui || {};
+          Store.data.ui.chatBgPattern = b.dataset.bg; Store.save();
+          const cur = parseFloat(($('#pat-size') || {}).value || savedScale) || 1;
+          applyPattern(b.dataset.bg, cur);
+        }));
+        // ---- Tamanho dos ícones do padrão: 6 tamanhos fixos ----
+        const SIZES = [0.6, 0.8, 1.0, 1.3, 1.7, 2.2];
+        const toIdx = (v) => {
+          const n = parseFloat(v);
+          if (isNaN(n)) return 2;
+          let best = 0, bestDiff = Infinity;
+          SIZES.forEach((s, i) => { const d = Math.abs(s - n); if (d < bestDiff) { bestDiff = d; best = i; } });
+          return best;
+        };
+        const toVal = (i) => SIZES[Math.max(0, Math.min(5, parseInt(i, 10) || 2))];
+        const slider = $('#pat-size');
+        const resetBtn = $('#pat-size-reset');
+        if (slider) {
+          slider.value = String(toIdx(savedScale));
+          slider.addEventListener('input', () => {
+            const v = toVal(slider.value);
+            const pat = (Store.data.ui && Store.data.ui.chatBgPattern) || '';
+            if (chatEl && pat) chatEl.style.setProperty('--pattern-image', buildPattern(pat, v));
+            clearTimeout(slider._t);
+            slider._t = setTimeout(() => {
+              Store.data.ui = Store.data.ui || {};
+              Store.data.ui.chatBgScale = v; Store.save();
+            }, 200);
+          });
+        }
+        if (resetBtn) resetBtn.addEventListener('click', () => {
+          const fixed = SIZES[2];
+          if (slider) slider.value = String(toIdx(fixed));
+          const pat = (Store.data.ui && Store.data.ui.chatBgPattern) || '';
+          if (chatEl && pat) chatEl.style.setProperty('--pattern-image', buildPattern(pat, fixed));
+          Store.data.ui = Store.data.ui || {};
+          Store.data.ui.chatBgScale = 1; Store.save();
+        });
+      }
+      // ---- Limpar cache do app (desregistra SW + caches) ----
+      const clearSw = $('#btn-clear-sw');
+      if (clearSw) {
+        clearSw.addEventListener('click', async () => {
+          try {
+            if ('serviceWorker' in navigator) {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              regs.forEach((r) => r.unregister());
+            }
+            if (window.caches && caches.keys) {
+              const ks = await caches.keys();
+              await Promise.all(ks.map((k) => caches.delete(k)));
+            }
+            this.toast('Cache limpo — recarregando…', { kind: 'info', duration: 1500 });
+            setTimeout(() => location.reload(), 1200);
+          } catch (err) {
+            console.error('[settings] falha ao limpar cache:', err);
+          }
         });
       }
       // preenche selects com a lista de sons do cuelume
@@ -134,15 +254,40 @@ handleSetting(act, val) {
 toggleSettingsPopover() {
       const p = this.dom.settingsPopover;
       if (!p.classList.contains('hidden')) { p.classList.add('hidden'); return; }
+      // ancora no botão de configurações da barra lateral (nav)
+      const anchor = this.dom.navSettings || this.dom.btnSettings;
+      if (!anchor) return;
       p.classList.remove('hidden');
-      const r = this.dom.btnSettings.getBoundingClientRect();
-      const pw = 330, ph = 460;
-      let left = r.right - pw;
+      p.style.visibility = 'hidden'; // mede sem piscar na posição errada
+      const r = anchor.getBoundingClientRect();
+      const pw = Math.min(340, window.innerWidth - 16);
+      // altura real do conteúdo (o popover cresce conforme o tema/seções)
+      p.style.left = '0px'; p.style.top = '0px';
+      const ph = p.offsetHeight || 460;
+      const margin = 8;
+      // horizontal: prefere ao lado direito da nav; se não couber, à esquerda; nunca sai da tela
+      let left = r.right + 12;
+      if (left + pw > window.innerWidth - margin) left = Math.max(margin, r.left - pw - 12);
+      if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+      // vertical: abaixo do botão se couber; senão alinha ao fundo da tela (clamp nas duas bordas)
       let top = r.bottom + 8;
-      if (left < 8) left = 8;
-      if (left + pw > window.innerWidth) left = window.innerWidth - pw - 8;
-      if (top + ph > window.innerHeight) top = r.top - ph - 8;
+      if (top + ph > window.innerHeight - margin) {
+        // tenta acima do botão
+        const above = r.top - ph - 8;
+        top = above >= margin ? above : Math.max(margin, window.innerHeight - ph - margin);
+      }
+      if (top < margin) top = margin;
+      if (top + ph > window.innerHeight - margin) {
+        // última garantia: popover maior que a tela → ancora no topo e permite scroll interno
+        top = margin;
+        p.style.maxHeight = (window.innerHeight - margin * 2) + 'px';
+        p.style.overflowY = 'auto';
+      } else {
+        p.style.maxHeight = '';
+        p.style.overflowY = '';
+      }
       p.style.left = left + 'px';
       p.style.top = top + 'px';
+      p.style.visibility = '';
     },
 };

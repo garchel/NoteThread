@@ -235,7 +235,8 @@
       </div>
       <div class="pat-size-row">
         <label class="settings-label" for="pat-size" style="padding:0">Tamanho dos ícones</label>
-        <input type="range" id="pat-size" min="0.5" max="3" step="0.1" value="1" />
+        <input type="range" id="pat-size" min="0" max="5" step="1" value="2" list="pat-sizes" />
+        <datalist id="pat-sizes"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option><option value="5"></option></datalist>
         <button type="button" id="pat-size-reset" class="btn-ghost pat-reset" title="Restaurar padrão">↺</button>
       </div>
     </div>

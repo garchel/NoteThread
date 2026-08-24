@@ -674,33 +674,9 @@ body::before {
 .chat::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   opacity: var(--pattern-opacity, .55);
-  --pattern-tile: calc(320px * var(--pattern-scale, 1));
-}
-.chat[data-bg="stars"]::before {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cpath d='M46 52l3.6 7.2 7.8.9-5.7 5.6 1.4 7.9-7.1-3.9-7.1 3.9 1.4-7.9-5.7-5.6 7.8-.9z' fill='none' stroke='%23c9a86a' stroke-width='2.2' stroke-linejoin='round'/%3E%3Cpath d='M212 198l2.4 4.8 5.2.6-3.8 3.7.9 5.3-4.7-2.6-4.7 2.6.9-5.3-3.8-3.7 5.2-.6z' fill='%23c9a86a'/%3E%3C/svg%3E");
-  background-size: var(--pattern-tile) var(--pattern-tile);
-}
-.chat[data-bg="hearts"]::before {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cg transform='rotate(-10 67 69)'%3E%3Cpath d='M67 74c-5.7-4.3-11.4-8.7-11.4-14.1 0-3 2.1-5.1 4.6-5.1 2.5 0 4.7 1.3 6.8 3.8 2.1-2.5 4.3-3.8 6.8-3.8 2.5 0 4.6 2.1 4.6 5.1 0 5.4-5.7 9.8-11.4 14.1z' fill='none' stroke='%23d98a8a' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/g%3E%3Cpath d='M236 226c-2.8-2.1-5.6-4.2-5.6-6.9 0-1.5 1.2-2.6 2.6-2.6 1.1 0 2.2.6 3 1.8.8-1.2 1.9-1.8 3-1.8 1.4 0 2.6 1.1 2.6 2.6 0 2.7-2.8 4.8-5.6 6.9z' fill='%23d98a8a' transform='rotate(12 236 222)'/%3E%3C/svg%3E");
-  background-size: var(--pattern-tile) var(--pattern-tile);
-}
-.chat[data-bg="clouds"]::before {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cpath d='M42 50a7.2 7.2 0 0 1 2.7-13.8A10.8 10.8 0 0 1 66.5 42a6.3 6.3 0 0 1 .9 11.1z' fill='none' stroke='%23a9bfcf' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M213 196a5 5 0 0 1 1.8-9.8A7.2 7.2 0 0 1 228 190a4.2 4.2 0 0 1 .5 7.7z' fill='%23a9bfcf' opacity='.45'/%3E%3C/svg%3E");
-  background-size: var(--pattern-tile) var(--pattern-tile);
-}
-.chat[data-bg="leaves"]::before {
-  /* folha clássica: elipse pontuda com nervura central e pecíolo */
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cg transform='rotate(28 54 49)'%3E%3Cpath d='M54 30 C71.1 40.5 74.7 58.5 54 80 C33.3 58.5 36.9 40.5 54 30 Z' fill='none' stroke='%238fb89a' stroke-width='2.2' stroke-linejoin='round'/%3E%3Cline x1='54' y1='34' x2='54' y2='73' stroke='%238fb89a' stroke-width='1.8' stroke-linecap='round'/%3E%3Cline x1='54' y1='76.5' x2='54' y2='84' stroke='%238fb89a' stroke-width='1.8' stroke-linecap='round'/%3E%3C/g%3E%3Cpath d='M229 203 C236.9 207.8 238.3 214 229 221 C219.7 214 221.1 207.8 229 203 Z' fill='%238fb89a' transform='rotate(-30 229 212)'/%3E%3C/svg%3E");
-  background-size: var(--pattern-tile) var(--pattern-tile);
-}
-.chat[data-bg="circles"]::before {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Ccircle cx='50' cy='44' r='12.6' fill='none' stroke='%23d9cdb8' stroke-width='2.4'/%3E%3Ccircle cx='200' cy='176' r='6.6' fill='none' stroke='%23d9cdb8' stroke-width='2.2'/%3E%3Ccircle cx='263' cy='63' r='4.5' fill='%23d9cdb8'/%3E%3C/svg%3E");
-  background-size: var(--pattern-tile) var(--pattern-tile);
+  background-image: var(--pattern-image, none);
+  background-size: 320px 320px;
+  background-repeat: repeat;
 }
 .cozy-banner {
   background: var(--accent); color: #1a1a1a; margin: 16px 16px 0; padding: 14px 18px;

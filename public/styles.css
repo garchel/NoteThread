@@ -364,12 +364,12 @@ body::before {
 
 .btn-google {
   width: 100%; display: flex; align-items: center; gap: 10px;
-  background: #fff; color: #1f1b2e; font-weight: 700; font-size: 14.5px; letter-spacing: -0.1px;
-  border: 1.5px solid #e6e1f2; border-radius: 14px; padding: 13px 16px; cursor: pointer;
+  background: var(--bg-elev); color: var(--text); font-weight: 700; font-size: 14.5px; letter-spacing: -0.1px;
+  border: 1.5px solid var(--border); border-radius: 14px; padding: 13px 16px; cursor: pointer;
   transition: transform .1s ease, box-shadow .2s, border-color .15s, background .15s;
-  box-shadow: 0 1px 2px rgba(20,16,40,.06);
+  box-shadow: var(--shadow-sm);
 }
-.btn-google:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); border-color: #d9d2f0; background: #fff; }
+.btn-google:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); border-color: var(--accent); background: var(--bg-elev); }
 .btn-google:active { transform: translateY(0) scale(.99); }
 .btn-google:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .divider { text-align: center; color: var(--text-dim); font-size: 13px; margin: 20px 0; position: relative; }
@@ -494,7 +494,7 @@ body::before {
   width: 32px; height: 32px; border-radius: 10px; cursor: pointer; font-size: 15px; line-height: 1;
   display: grid; place-items: center; transition: background .15s, transform .1s;
 }
-.btn-icon-sm:hover { background: #e3dbff; transform: translateY(-1px); }
+.btn-icon-sm:hover { background: var(--accent-soft); transform: translateY(-1px); }
 .btn-icon-sm:active { transform: scale(.92); }
 
 /* ---- Busca ---- */
@@ -805,7 +805,7 @@ body::before {
   display: grid; place-items: center; transition: background .15s, transform .1s, box-shadow .15s, opacity .2s;
   box-shadow: var(--shadow-sm);
 }
-.btn-pin:hover { background: #e3dbff; transform: translateY(-1px); }
+.btn-pin:hover { background: var(--accent-soft); transform: translateY(-1px); }
 .btn-pin.has-pin { background: linear-gradient(135deg, #f5b942, #f59e0b); color: #fff; box-shadow: 0 4px 12px rgba(245,185,66,.35); }
 
 .messages {
@@ -1194,8 +1194,8 @@ body::before {
 
 
 .bubble.editing {
-  outline: none; cursor: text; box-shadow: 0 0 0 2px var(--accent), 0 4px 14px rgba(124, 92, 255, .25);
-  background: linear-gradient(135deg, #6a4af0, #5a3fd8); user-select: text;
+  outline: none; cursor: text; box-shadow: 0 0 0 2px var(--accent), var(--shadow-md);
+  background: var(--accent); color: var(--on-accent); user-select: text;
 }
 .bubble.remote.editing { background: var(--bubble-sys); color: var(--text); }
 .bubble.editing:empty::before { content: "Escreva sua nota…"; opacity: .5; }

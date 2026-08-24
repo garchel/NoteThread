@@ -27,6 +27,11 @@
   --on-accent: #ffffff;
   --bg-glow-1: #F5E6C8;
   --bg-glow-2: #E8DCC8;
+  --glyph-stars: #c9a86a;
+  --glyph-hearts: #d98a8a;
+  --glyph-clouds: #a9bfcf;
+  --glyph-leaves: #8fb89a;
+  --glyph-circles: #d9cdb8;
   /* Hierarquia de superfícies 60/30/10: chat claro > explorer médio > nav escura */
   --surf-chat: #FFFBF5;
   --surf-explorer: #FBF4E8;
@@ -89,6 +94,11 @@
 [data-theme="dark"] {
   --bg: #191622;
   --bg-nav: #141120;
+  --glyph-stars: #8a7a5a;
+  --glyph-hearts: #9a6a6a;
+  --glyph-clouds: #6a7a8a;
+  --glyph-leaves: #6a8a7a;
+  --glyph-circles: #7a6a5a;
   --bg-elev: #221d2e;
   --bg-explorer: #1e1930;
   --bg-chat: #15111d;
@@ -222,6 +232,11 @@
 [data-theme="midnight"] {
   --bg: #0e1525;
   --bg-nav: #0b1120;
+  --glyph-stars: #6a7a8a;
+  --glyph-hearts: #7a6a8a;
+  --glyph-clouds: #5a6a7a;
+  --glyph-leaves: #5a7a6a;
+  --glyph-circles: #6a5a4a;
   --bg-elev: #16203a;
   --bg-explorer: #131c31;
   --bg-chat: #0a0f1c;
@@ -702,11 +717,10 @@ body::before {
   background-repeat: repeat;
 }
 .cozy-banner {
-  background: var(--accent); color: #1a1a1a; margin: 16px 16px 0; padding: 14px 18px;
+  background: var(--accent); color: var(--on-accent); margin: 16px 16px 0; padding: 14px 18px;
   border-radius: 14px; font-weight: 800; font-size: var(--text-lg); box-shadow: var(--shadow-sm);
 }
-/* texto do banner herda a cor do próprio banner — sem fundo accent (toggle off), usa a cor de texto do tema */
-.cozy-banner:not(.thread-colored) { color: var(--text); }
+.cozy-banner:not(.thread-colored) { color: var(--text); background: var(--bg-elev); border: 1px solid var(--border); }
 .cozy-banner:not(.thread-colored) .chat-name { color: var(--text); }
 .cozy-banner.thread-colored .chat-name { color: inherit; }
 /* Campo de Entrada flutuante: sem bg próprio — apenas o input (cozy-input-row) e o que está diretamente ao redor */

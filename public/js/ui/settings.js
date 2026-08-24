@@ -37,8 +37,14 @@ bindSettings() {
       const savedFont = (Store.data && Store.data.ui && Store.data.ui.fontFamily) || '';
       if (savedFont) document.documentElement.style.setProperty('--app-font', savedFont);
       // fundo padrão da área principal (aplicado no boot, com escala do glifo)
+      const SIZES_BOOT = [0.6, 0.8, 1.0, 1.3, 1.7, 2.2];
+      const clampScale = (v) => {
+        const n = parseFloat(v);
+        if (isNaN(n)) return 1;
+        return SIZES_BOOT.reduce((best, cur) => Math.abs(cur - n) < Math.abs(best - n) ? cur : best, SIZES_BOOT[2]);
+      };
       const savedBg = (Store.data && Store.data.ui && Store.data.ui.chatBgPattern) || '';
-      const savedScaleBoot = (Store.data && Store.data.ui && Store.data.ui.chatBgScale) || 1;
+      const savedScaleBoot = clampScale((Store.data && Store.data.ui && Store.data.ui.chatBgScale) || 1);
       const chatEl = document.querySelector('.chat');
       if (chatEl) {
         if (savedBg) {

@@ -16,7 +16,7 @@ import { TreeMethods } from './js/ui/tree.js';
 import { ComposerMethods } from './js/ui/composer.js';
 import { SyncEventsMethods } from './js/ui/sync-events.js';
 
-console.info('[NoteThread] bundle v32 — ES Modules');
+console.info('[NoteThread] bundle v33 — ES Modules');
 
 (() => {
   'use strict';
@@ -31,7 +31,7 @@ async init() {
         modalBody: $('#modal-body'), modalOk: $('#modal-ok'), modalCancel: $('#modal-cancel'),
         msgPopover: $('#msg-popover'), pinPopover: $('#pin-popover'),
         pinBody: $('#pin-body'), btnPin: $('#btn-pin'),
-        settingsPopover: $('#settings-popover'), btnSettings: $('#btn-settings'),
+        settingsPopover: $('#settings-popover'), btnSettings: $('#btn-settings'), navSettings: $('#nav-settings'),
         searchInput: $('#search-input'), searchClear: $('#search-clear'), searchResults: $('#search-results'),
         btnAttach: $('#btn-attach'), fileInput: $('#file-input'), attachPreview: $('#attach-preview'),
       };
@@ -45,8 +45,24 @@ async init() {
       this.bindSync();
       this.bindContextMenu();
       // Nav cozy
-      const navNew = $('#nav-new-note'); if (navNew) navNew.addEventListener('click', () => this.createThread());
-      const navSet = $('#nav-settings'); if (navSet) navSet.addEventListener('click', (e) => { e.stopPropagation(); this.toggleSettingsPopover(); });
+      // Busca: foca o campo da sidebar e rola até ele
+      const navSearch = $('#nav-search'); if (navSearch) navSearch.addEventListener('click', () => {
+        const si = $('#search-input');
+        if (si) { si.focus(); si.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      });
+      // Lembretes: popover com notas pendentes
+      const navRem = $('#nav-reminders');
+      if (navRem) {
+        navRem.addEventListener('click', (e) => { e.stopPropagation(); this.toggleRemindersPopover(); });
+        document.addEventListener('click', (e) => {
+          const p = $('#rem-popover');
+          if (p && !p.classList.contains('hidden') && !p.contains(e.target) && !navRem.contains(e.target)) {
+            p.classList.add('hidden');
+          }
+        });
+        this.updateRemBadge();
+      }
+      // (o toggle do popover de configurações é ligado em bindSettings, ancorado no #nav-settings)
       this.bindModal();
       this.bindMsgPopover();
       this.bindPinPopover();
@@ -167,7 +183,17 @@ showModal(title, bodyHtml, onOk) {
   window.NoteThread = { Store, Sync, UI, Sound };
 
   // registra o Service Worker (PWA / offline)
-  if ('serviceWorker' in navigator) {
+  // kill-switch: adicione ?nosw=1 à URL para desregistrar todos os SWs e limpar caches
+  const url = new URL(location.href);
+  if (url.searchParams.has('nosw')) {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+    }
+    if (window.caches && caches.keys) {
+      caches.keys().then((ks) => ks.forEach((k) => caches.delete(k)));
+    }
+    console.warn('[NoteThread] SW desregistrado e caches limpos (?nosw=1). Recarregue sem o parâmetro.');
+  } else if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
         .then((reg) => {
@@ -197,7 +223,18 @@ showModal(title, bodyHtml, onOk) {
     });
     navigator.serviceWorker.addEventListener('message', (e) => {
       if (e.data && e.data.type === 'notethread-sync' && Sync.flushQueue) Sync.flushQueue();
+      // clique numa notificação de lembrete → abre o caderno
+      if (e.data && e.data.type === 'notethread-open-thread' && e.data.threadId) {
+        if (Store.getThread(e.data.threadId)) UI.openThread(e.data.threadId);
+      }
     });
+    // abertura via notificação com app fechado (?thread=<id>)
+    const bootUrl = new URL(location.href);
+    const bootThread = bootUrl.searchParams.get('thread');
+    if (bootThread && Store.getThread(bootThread)) {
+      UI.openThread(bootThread);
+      history.replaceState(null, '', location.pathname);
+    }
     window.addEventListener('online', () => { if (Sync.flushQueue) Sync.flushQueue(); });
   }
 })();

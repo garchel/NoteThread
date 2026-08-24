@@ -19,19 +19,37 @@
   const showTooltip = (el) => {
     const name = el.getAttribute('data-friendly-name');
     if (!name || !tooltip) return;
-    // mostra nome + id/classe para referência precisa (estilo devtools)
     const id = el.id ? `#${el.id}` : '';
     const cls = el.className && typeof el.className === 'string' ? '.' + el.className.split(/\s+/).filter(c=>c && c!=='hidden').slice(0,2).join('.') : '';
     const extra = id || cls ? ` <span style="opacity:.6;font-weight:400">${id}${cls}</span>` : '';
     tooltip.innerHTML = `${name}${extra}`;
     tooltip.classList.remove('hidden');
     const rect = el.getBoundingClientRect();
-    let top = rect.top - 28;
-    let left = rect.left + rect.width / 2;
-    if (top < 8) top = rect.bottom + 8;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    // para elementos grandes (sidebar, canvas), posiciona perto do mouse para não cortar
+    const isLarge = rect.height > 200 || rect.width > 400;
+    let top, left;
+    if (isLarge) {
+      top = mouseY + 16;
+      left = mouseX + 16;
+    } else {
+      top = rect.top - 30;
+      if (top < 8) top = rect.bottom + 8;
+      left = rect.left + rect.width / 2;
+    }
+    tooltip.style.transform = isLarge ? 'none' : 'translateX(-50%)';
+    // mede para prender dentro da janela
     tooltip.style.left = left + 'px';
     tooltip.style.top = top + 'px';
-    tooltip.style.transform = 'translateX(-50%)';
+    const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    if (!isLarge) {
+      left = left - tw / 2;
+    }
+    left = Math.max(8, Math.min(left, vw - tw - 8));
+    if (top + th > vh - 8) top = Math.max(8, vh - th - 8);
+    if (top < 8) top = 8;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
   };
 
   const hideTooltip = () => {
@@ -41,6 +59,9 @@
       currentEl = null;
     }
   };
+
+  let mouseX = 0, mouseY = 0;
+  document.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; if (active && currentEl) showTooltip(currentEl); });
 
   const onMouseOver = (e) => {
     if (!active) return;
@@ -58,13 +79,6 @@
     if (el && el === currentEl) hideTooltip();
   };
 
-  const onMouseMove = (e) => {
-    if (!active || !tooltip || tooltip.classList.contains('hidden')) return;
-    // segue o mouse levemente para melhor UX tipo devtools
-    const x = e.clientX;
-    tooltip.style.left = x + 'px';
-  };
-
   if (btn) {
     updateBtn();
     btn.addEventListener('click', () => {
@@ -76,7 +90,6 @@
 
   document.addEventListener('mouseover', onMouseOver);
   document.addEventListener('mouseout', onMouseOut);
-  document.addEventListener('mousemove', onMouseMove);
 
   // Adiciona nomes granulares para elementos dinâmicos (bolhas por tipo, cadernos, inputs)
   const observer = new MutationObserver((mutations) => {

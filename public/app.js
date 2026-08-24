@@ -85,9 +85,11 @@ async init() {
         document.addEventListener('click', (e) => {
           if (!profilePop.contains(e.target) && !profileBtn.contains(e.target)) profilePop.classList.add('hidden');
         });
-        document.getElementById('profile-config')?.addEventListener('click', () => {
+        document.getElementById('profile-config')?.addEventListener('click', (e) => {
+          e.stopPropagation();
           profilePop.classList.add('hidden');
-          this.toggleSettingsPopover();
+          // pequeno delay para não ser fechado pelo handler global do settings popover
+          setTimeout(() => this.toggleSettingsPopover(), 10);
         });
         document.getElementById('profile-logout')?.addEventListener('click', async () => {
           const supa = this._getSupa && this._getSupa();

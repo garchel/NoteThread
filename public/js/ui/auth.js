@@ -125,11 +125,11 @@ bindAuth() {
         }
       });
 
-      $('#btn-logout').addEventListener('click', async () => {
+      const logoutBtn = $('#profile-logout') || $('#btn-logout');
+      if (logoutBtn) logoutBtn.addEventListener('click', async () => {
         const supa = this._getSupa();
         if (supa) try { await supa.auth.signOut(); } catch {}
         Store.setUser(null); this.renderAuthOrApp();
-        // reseta form
         if (passField) passField.classList.add('hidden');
         if (links) links.classList.add('hidden');
         if (passInput) { passInput.value = ''; passInput.required = false; }

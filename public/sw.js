@@ -1,11 +1,11 @@
 // NoteThread Service Worker — app shell offline + cache-first para assets.
 // Bump CACHE (vN) a cada deploy para invalidar versões anteriores.
-const CACHE = 'notethread-v35';
+const CACHE = 'notethread-v69';
 const ASSETS = [
   './', './index.html', './app.js', './styles.css',
   './js/utils.js', './js/icons.js', './js/emojis.js', './js/markdown.js',
   './js/store.js', './js/sound.js', './js/sync-supabase.js', './js/offline-queue.js',
-  './js/friendly-names.js',
+  './js/bg-patterns.js', './js/friendly-names.js',
   './js/ui/picker.js', './js/ui/navigation.js', './js/ui/messages.js',
   './js/ui/mentions.js', './js/ui/reminders.js',
   './js/ui/settings.js', './js/ui/auth.js', './js/ui/tree.js',
@@ -23,6 +23,23 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+// clique numa notificação de lembrete → abre o app no caderno da nota
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const tid = e.notification.data && e.notification.data.threadId;
+  e.waitUntil((async () => {
+    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // se já há janela aberta, foca e navega
+    for (const client of clientList) {
+      await client.focus();
+      if (tid) client.postMessage({ type: 'notethread-open-thread', threadId: tid });
+      return;
+    }
+    // sem janela aberta: abre nova
+    await self.clients.openWindow(tid ? './?thread=' + encodeURIComponent(tid) : './');
+  })());
 });
 
 // Estratégia: cache-first para GET estáticos; rede com fallback ao cache para navegação.
@@ -49,6 +66,21 @@ self.addEventListener('fetch', (e) => {
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') return;
   // supabase/esm.sh: idem — não responder via SW
   if (url.hostname.endsWith('.supabase.co') || url.hostname === 'esm.sh') return;
+
+  // CSS/JS: network-first — pega sempre a versão mais nova; cache só como fallback offline
+  const isAsset = url.origin === location.origin && /\.(css|js|mjs)$/.test(url.pathname);
+  if (isAsset) {
+    e.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      }).catch(() => caches.match(req).then((cached) => cached || new Response('', { status: 504, statusText: 'offline' })))
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(req).then((cached) => {

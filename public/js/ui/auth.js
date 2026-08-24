@@ -51,10 +51,12 @@ bindAuth() {
       // toggle senha
       if (toggleBtn && passInput) {
         toggleBtn.addEventListener('click', () => {
-          const isPass = passInput.type === 'password';
-          passInput.type = isPass ? 'text' : 'password';
-          toggleBtn.textContent = isPass ? '◑' : '◐';
-        });
+                  const isPass = passInput.type === 'password';
+                  passInput.type = isPass ? 'text' : 'password';
+                  toggleBtn.textContent = isPass ? '◑' : '◐';
+                  toggleBtn.setAttribute('aria-label', isPass ? 'Ocultar senha' : 'Mostrar senha');
+                  toggleBtn.setAttribute('aria-pressed', String(isPass));
+                });
       }
       if (switchBtn) switchBtn.addEventListener('click', () => setMode(mode === 'login' ? 'signup' : 'login'));
       if (forgotBtn) forgotBtn.addEventListener('click', async () => {

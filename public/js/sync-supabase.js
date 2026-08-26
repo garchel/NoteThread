@@ -33,7 +33,13 @@ import { OfflineQueue } from './offline-queue.js';
       // debounce só para 'connecting' (evita frenesi); online/offline sempre aplicam
       if (s === 'connecting' && this._lastStatus && now - this._lastStatusAt < 400) return;
       this._lastStatus = s; this._lastStatusAt = now;
-      const el = $('#sync-status'); if (!el) return;
+      const el = $('#sync-status');
+      // banner de erro no composer: visível em offline, escondido quando online
+      if (window.NoteThread && window.NoteThread.UI) {
+        if (s === 'offline') window.NoteThread.UI.showSyncError();
+        else if (s === 'online') window.NoteThread.UI.hideSyncError();
+      }
+      if (!el) return;
       el.className = 'sync-status ' + s;
       el.dataset.state = s;
       el.dataset.status = s === 'online' ? 'Sincronizado' : s === 'connecting' ? 'Conectando…' : 'Offline — suas notas ficam salvas neste dispositivo';
@@ -111,8 +117,8 @@ import { OfflineQueue } from './offline-queue.js';
         this.supa.from('notes').select('*').order('ts', { ascending: false }).limit(200)
       ]);
       const payload = {
-        threads: Object.fromEntries((th.data || []).map(t => [t.id, { id: t.id, name: t.name, emoji: t.emoji, folderId: t.folder_id, favorite: t.favorite, pinnedId: t.pinned_id, createdAt: new Date(t.created_at).getTime(), updatedAt: new Date(t.updated_at).getTime(), lastPreview: t.last_preview }])),
-        folders: Object.fromEntries((fo.data || []).map(f => [f.id, { id: f.id, name: f.name, emoji: f.emoji, parentId: f.parent_id, createdAt: new Date(f.created_at).getTime() }])),
+        threads: Object.fromEntries((th.data || []).map(t => [t.id, { id: t.id, name: t.name, emoji: t.emoji, color: t.color || undefined, folderId: t.folder_id, favorite: t.favorite, pinnedId: t.pinned_id, createdAt: new Date(t.created_at).getTime(), updatedAt: new Date(t.updated_at).getTime(), lastPreview: t.last_preview }])),
+        folders: Object.fromEntries((fo.data || []).map(f => [f.id, { id: f.id, name: f.name, emoji: f.emoji, color: f.color || undefined, parentId: f.parent_id, createdAt: new Date(f.created_at).getTime() }])),
         notes: (() => { const m = {}; (no.data || []).forEach(n => { (m[n.thread_id] = m[n.thread_id] || []).push({ clientId: n.client_id, threadId: n.thread_id, text: n.text, images: n.images || [], tags: n.tags || [], ts: Number(n.ts), sortOrder: n.sort_order, edited: n.edited, editedAt: n.edited_at, rev: n.rev, remindAt: n.remind_at ? Number(n.remind_at) : null, remindFired: !!n.remind_fired, userId: Store.user ? Store.user.mail : 'anon' }); }); return m; })()
       };
       this.emit('snapshot', payload);
@@ -127,17 +133,22 @@ import { OfflineQueue } from './offline-queue.js';
           .on('postgres_changes', { event: '*', schema: 'public', table: 'notes', ...(filt?{filter:filt}:{}) }, (p) => {
             const r = p.new || p.old; if (!r) return;
             if (p.eventType === 'DELETE') this.emit('note:delete', { threadId: r.thread_id, clientId: r.client_id });
-            else this.emit('note:upsert', { clientId: r.client_id, threadId: r.thread_id, text: r.text, images: (r.images||[]).slice(0,2), tags: r.tags || [], ts: Number(r.ts), sortOrder: r.sort_order, edited: r.edited, editedAt: r.edited_at, rev: r.rev });
+            else {
+              const payload = { clientId: r.client_id, threadId: r.thread_id, text: r.text, images: (r.images||[]).slice(0,2), tags: r.tags || [], ts: Number(r.ts), sortOrder: r.sort_order, edited: r.edited, editedAt: r.edited_at, rev: r.rev, userId: r.user_id };
+              this.emit('note:upsert', payload);
+              // A6: evento separado para nota de OUTRO usuário (tint de chegada)
+              this.emit('note:remote', payload);
+            }
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', ...(filt?{filter:filt}:{}) }, (p) => {
             const r = p.new || p.old; if (!r) return;
             if (p.eventType === 'DELETE') this.emit('thread:delete', { id: r.id });
-            else this.emit('thread:upsert', { id: r.id, name: r.name, emoji: r.emoji, folderId: r.folder_id, favorite: r.favorite, pinnedId: r.pinned_id, createdAt: new Date(r.created_at).getTime(), updatedAt: new Date(r.updated_at).getTime(), lastPreview: r.last_preview });
+            else this.emit('thread:upsert', { id: r.id, name: r.name, emoji: r.emoji, color: r.color || undefined, folderId: r.folder_id, favorite: r.favorite, pinnedId: r.pinned_id, createdAt: new Date(r.created_at).getTime(), updatedAt: new Date(r.updated_at).getTime(), lastPreview: r.last_preview });
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'folders', ...(filt?{filter:filt}:{}) }, (p) => {
             const r = p.new || p.old; if (!r) return;
             if (p.eventType === 'DELETE') this.emit('folder:delete', { id: r.id });
-            else this.emit('folder:upsert', { id: r.id, name: r.name, emoji: r.emoji, parentId: r.parent_id, createdAt: new Date(r.created_at).getTime() });
+            else this.emit('folder:upsert', { id: r.id, name: r.name, emoji: r.emoji, color: r.color || undefined, parentId: r.parent_id, createdAt: new Date(r.created_at).getTime() });
           })
           .subscribe();
         this.channel = ch;
@@ -199,11 +210,11 @@ import { OfflineQueue } from './offline-queue.js';
       } else if (type === 'note:remind') {
         await this.supa.from('notes').update({ remind_at: payload.remindAt || null, remind_fired: !!payload.remindFired }).eq('client_id', payload.clientId);
       } else if (type === 'thread:upsert') {
-        const t = payload; await this.supa.from('threads').upsert({ id: t.id, name: t.name, emoji: t.emoji, folder_id: t.folderId || null, favorite: !!t.favorite, pinned_id: t.pinnedId || null, updated_at: new Date().toISOString(), last_preview: t.lastPreview || '', user_id: uid }, { onConflict: 'id' });
+        const t = payload; await this.supa.from('threads').upsert({ id: t.id, name: t.name, emoji: t.emoji, color: t.color || null, folder_id: t.folderId || null, favorite: !!t.favorite, pinned_id: t.pinnedId || null, updated_at: new Date().toISOString(), last_preview: t.lastPreview || '', user_id: uid }, { onConflict: 'id' });
       } else if (type === 'thread:delete') {
         await this.supa.from('threads').delete().eq('id', payload.id);
       } else if (type === 'folder:upsert') {
-        const f = payload; await this.supa.from('folders').upsert({ id: f.id, name: f.name, emoji: f.emoji, parent_id: f.parentId || null, user_id: uid }, { onConflict: 'id' });
+        const f = payload; await this.supa.from('folders').upsert({ id: f.id, name: f.name, emoji: f.emoji, color: f.color || null, parent_id: f.parentId || null, user_id: uid }, { onConflict: 'id' });
       } else if (type === 'folder:delete') {
         await this.supa.from('folders').delete().eq('id', payload.id);
       } else if (type === 'note:delete') {
@@ -218,6 +229,29 @@ import { OfflineQueue } from './offline-queue.js';
         await this.supa.from('threads').update({ pinned_id: cur }).eq('id', payload.threadId);
       } else if (type === 'thread:move') {
         await this.supa.from('threads').update({ folder_id: payload.folderId || null }).eq('id', payload.threadId);
+      }
+    },
+
+    // LB-W3 fix: apaga TODOS os dados do usuário no Supabase (RLS limita ao próprio user_id).
+    // Usado pelo "Apagar tudo" — sem isso os dados ressincronizam ao recarregar (risco LGPD).
+    async deleteAllRemote() {
+      if (!this.supa) return { ok: false, reason: 'sem supabase' };
+      try {
+        const uid = await this._uid();
+        if (!uid) return { ok: false, reason: 'sem sessão' };
+        // ordem importa: notes → threads/folders (notas referenciam thread_id)
+        const delNotes = await this.supa.from('notes').delete().neq('client_id', '');
+        const delThreads = await this.supa.from('threads').delete().neq('id', '');
+        const delFolders = await this.supa.from('folders').delete().neq('id', '');
+        const errors = [delNotes.error, delThreads.error, delFolders.error].filter(Boolean);
+        if (errors.length) {
+          console.warn('[supabase] deleteAllRemote falhou', errors);
+          return { ok: false, reason: errors[0].message };
+        }
+        return { ok: true };
+      } catch (e) {
+        console.warn('[supabase] deleteAllRemote exceção', e);
+        return { ok: false, reason: String((e && e.message) || e) };
       }
     }
   };

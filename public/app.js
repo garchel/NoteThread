@@ -16,7 +16,7 @@ import { TreeMethods } from './js/ui/tree.js';
 import { ComposerMethods } from './js/ui/composer.js';
 import { SyncEventsMethods } from './js/ui/sync-events.js';
 
-console.info('[NoteThread] bundle v33 — ES Modules');
+// bundle ES Modules carregado
 
 (() => {
   'use strict';

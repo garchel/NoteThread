@@ -1818,7 +1818,14 @@ button:focus { outline: none; }
 
 /* ===================== DRAG & DROP DE THREADS ===================== */
 .tnode[draggable="true"] { cursor: grab; }
-.tnode.dnd-dragging { opacity: .5; }
+/* A7 — drag & drop: lift físico (escala + sombra cresce) ao pegar o item */
+.tnode.dnd-dragging {
+  opacity: .85;
+  transform: scale(1.03);
+  box-shadow: var(--shadow-lg);
+  transition: transform var(--dur-fast, 120ms) var(--ease-spring), box-shadow var(--dur-base, 200ms);
+  position: relative; z-index: 5;
+}
 .tnode.dnd-over { box-shadow: inset 0 2px 0 var(--accent); background: var(--accent-soft); }
 .folder-node.dnd-over-folder { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-soft); border-radius: 8px; }
 

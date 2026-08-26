@@ -113,6 +113,10 @@ export const MessagesMethods = {
         left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
         let top = r.bottom + 6;
         top = Math.max(8, Math.min(top, window.innerHeight - mh - 8));
+        // M7: popover nasce do gatilho — origem relativa ao ponto do botão
+        const originX = r.right - left;
+        const originY = r.top - top;
+        menu.style.transformOrigin = Math.max(0, Math.min(originX, mw)) + 'px ' + Math.max(0, Math.min(originY, mh)) + 'px';
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
         menu.style.visibility = '';

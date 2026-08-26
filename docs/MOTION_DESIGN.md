@@ -69,7 +69,7 @@ Interação de alta frequência = atenção proibida (custo se repete a cada dis
 | **Fase 2 — Saídas** | Sistema `.leaving` p/ popover/modal/toast/ctx-menu (M2, M9) | Médio | [x] ✅ v73/v74 (`hideWithExit`) |
 | **Fase 3 — Delight** | A1 checkbox tick, A3 pin badge pop, A6 incoming-note tint | Pequeno | [x] ✅ v74 (A6 via `note:remote`) |
 | **Fase 4 — Ambient** | A4 sync breathing, A5 planta flutuante (ambos mortos no reduced-motion) | Pequeno | [x] ✅ v74 |
-| Backlog | M6/M9 stagger+origem, M7 transform-origin dinâmico, M8 view transitions, A7 dnd lift | — | [ ] |
+| Backlog | ~~M6/M9 stagger+origem, M7 transform-origin dinâmico, M8 view transitions, A7 dnd lift~~ | — | [x] ✅ M7/M8/A7 implementados (v81); stagger da árvore (M6) mantido fora — custo/benefício baixo |
 
 ## Checklist por animação nova (da skill)
 

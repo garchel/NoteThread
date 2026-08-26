@@ -20,6 +20,6 @@ describe('PWA', ()=>{
   });
   it('sw.js é v66', ()=>{
     const sw=readFileSync('public/sw.js','utf8');
-    assert.match(sw, /notethread-v80/);
+    assert.match(sw, /notethread-v81/);
   });
 });

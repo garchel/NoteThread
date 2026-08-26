@@ -283,7 +283,12 @@ _processImport(raw) {
 handleSetting(act, val) {
       if (act === 'theme') {
         Store.data.ui = Store.data.ui || {}; Store.data.ui.theme = val; Store.save();
-        this.applyTheme();
+        // M8: crossfade via View Transitions API quando suportado (fallback: troca seca)
+        if (document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          document.startViewTransition(() => this.applyTheme());
+        } else {
+          this.applyTheme();
+        }
         this.dom.settingsPopover.querySelectorAll('[data-set="theme"]').forEach((b) => b.classList.toggle('active', b.dataset.val === val));
       } else if (act === 'sort') {
         Store.data.ui = Store.data.ui || {}; Store.data.ui.sort = val; Store.save();
@@ -397,6 +402,11 @@ handleSetting(act, val) {
       // reset completo do estado do ciclo anterior (maxHeight/overflow "travados")
       p.style.maxHeight = '';
       p.style.overflowY = '';
+      // M7: nasce a partir da âncora que abriu
+      const ar = anchor.getBoundingClientRect();
+      const pr = p.getBoundingClientRect();
+      p.style.transformOrigin = Math.max(0, Math.min(ar.left - pr.left + ar.width / 2, pr.width)) + 'px ' +
+                                (ar.top < pr.top ? '0' : Math.max(0, Math.min(ar.top - pr.top, pr.height))) + 'px';
       p.classList.remove('hidden');
       p.style.visibility = 'hidden'; // mede sem piscar na posição errada
       const r = anchor.getBoundingClientRect();

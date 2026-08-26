@@ -116,7 +116,7 @@ showReminderModal(clientId) {
           this.queueRenderTree();
         });
       });
-      if (fired > 0) console.info(`[reminders] ${fired} lembrete(s) disparado(s)`);
+      
       this.updateRemBadge();
       // se o popover estiver aberto, atualiza a lista
       const p = document.getElementById('rem-popover');

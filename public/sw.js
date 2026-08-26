@@ -1,6 +1,6 @@
 // NoteThread Service Worker — app shell offline + cache-first para assets.
 // Bump CACHE (vN) a cada deploy para invalidar versões anteriores.
-const CACHE = 'notethread-v80';
+const CACHE = 'notethread-v81';
 const ASSETS = [
   './', './index.html', './app.js', './styles.css',
   './assets/logo.svg', './assets/logo.png',

@@ -80,7 +80,7 @@ import { OfflineQueue } from './offline-queue.js';
       this._connecting = true;
       this.setStatus('connecting');
       if (!USE_SUPABASE) { this._connecting = false; this.setStatus('offline'); return; }
-      const t = setTimeout(() => { if (!this.connected) { this.setStatus('offline'); console.warn('[supabase] connect timeout'); } this._connecting = false; }, 8000);
+      const t = setTimeout(() => { if (!this.connected) { this.setStatus('offline');  } this._connecting = false; }, 8000);
       try {
         this.supa = await getSupa();
         const { data: { session } } = await this.supa.auth.getSession();

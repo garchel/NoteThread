@@ -1,5 +1,5 @@
 // NoteThread — entry point (ES Modules, sem build step)
-import { haptic, $, uid, esc, fmtTime, now } from './js/utils.js';
+import { haptic, $, uid, esc, fmtTime, now, hideWithExit } from './js/utils.js';
 import { ICON, wrapSvg } from './js/icons.js';
 import { renderMarkdown } from './js/markdown.js';
 import { Store } from './js/store.js';
@@ -175,8 +175,12 @@ toast(msg, opts) {
       let hideTimer = null;
       const hide = () => {
         if (hideTimer) clearTimeout(hideTimer);
+        if (t._leaving) return;
+        t._leaving = true;
+        // animação de saída: desliza para cima + fade antes de remover
         t.classList.remove('show');
-        setTimeout(() => t.remove(), 300);
+        t.classList.add('leaving');
+        setTimeout(() => t.remove(), 180);
       };
       if (opts.action && opts.action.fn) {
         const btn = document.createElement('button');
@@ -193,15 +197,48 @@ toast(msg, opts) {
 bindModal() {
       this.dom.modalCancel.addEventListener('click', () => this.closeModal());
       this.dom.modalOk.addEventListener('click', () => this.modalOkHandler && this.modalOkHandler());
+      // Focus trap (a11y): Tab circula só dentro do modal; Esc fecha
+      this.dom.modal.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.stopPropagation(); this.closeModal(); return; }
+        if (e.key !== 'Tab') return;
+        const focusables = this.dom.modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const list = [...focusables].filter((el) => !el.disabled && el.offsetParent !== null);
+        if (!list.length) return;
+        const first = list[0], last = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      });
     },
 
-closeModal() { this.dom.modal.classList.add('hidden'); this.modalOkHandler = null; this.dom.modalOk.classList.remove('btn-danger'); this.dom.modalOk.textContent = 'OK'; },
+closeModal() {
+      // M2: saída animada antes de esconder
+      hideWithExit(this.dom.modal);
+      this.modalOkHandler = null;
+      this.dom.modalOk.classList.remove('btn-danger', 'danger');
+      this.dom.modalOk.classList.add('primary');
+      this.dom.modalOk.textContent = 'OK';
+      // devolve o foco ao gatilho que abriu o modal
+      if (this._modalTrigger && document.contains(this._modalTrigger)) {
+        try { this._modalTrigger.focus({ preventScroll: true }); } catch { this._modalTrigger.focus(); }
+      }
+      this._modalTrigger = null;
+    },
 
 showModal(title, bodyHtml, onOk) {
+      // lembra quem abriu para devolver o foco no fecho
+      const ae = document.activeElement;
+      this._modalTrigger = (ae && ae !== document.body && !this.dom.modal.contains(ae)) ? ae : null;
       this.dom.modalTitle.textContent = title;
       this.dom.modalBody.innerHTML = bodyHtml;
       this.modalOkHandler = onOk;
+      // se o modal está saindo (leaving), marca reabertura p/ o hideWithExit abortar
+      if (this.dom.modal._leaving) this.dom.modal._reopenRequested = true;
       this.dom.modal.classList.remove('hidden');
+      // foco inicial no primeiro controle focável do modal
+      requestAnimationFrame(() => {
+        const f = this.dom.modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (f) f.focus();
+      });
     },
   };
 
@@ -211,7 +248,7 @@ showModal(title, bodyHtml, onOk) {
 
   Store.load();
   // aplica tema salvo antes de montar a UI
-  const savedTheme = (Store.data.ui && Store.data.ui.theme) || 'lavender';
+  const savedTheme = (Store.data.ui && Store.data.ui.theme) || 'peach';
   document.documentElement.dataset.theme = savedTheme;
   UI.init();
 

@@ -15,6 +15,7 @@ create table if not exists folders (
   name text not null,
   parent_id text,
   emoji text,
+  color text,
   created_at timestamptz default now()
 );
 
@@ -23,6 +24,7 @@ create table if not exists threads (
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
   emoji text,
+  color text,
   folder_id text references folders(id) on delete set null,
   favorite boolean default false,
   pinned_id text,
@@ -52,6 +54,8 @@ create table if not exists notes (
 -- migração para bancos já criados antes de remind_at
 alter table notes add column if not exists remind_at bigint;
 alter table notes add column if not exists remind_fired boolean default false;
+alter table threads add column if not exists color text;
+alter table folders add column if not exists color text;
 
 -- 2. RLS
 alter table profiles enable row level security;

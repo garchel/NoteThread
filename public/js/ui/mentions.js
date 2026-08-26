@@ -69,6 +69,52 @@ _mentionToken(ta) {
       ta.selectionStart = ta.selectionEnd = start + token.length;
       ta.focus();
       ta.dispatchEvent(new Event('input', { bubbles: true }));
+      this._renderMentionHighlight(ta);
+    },
+
+    // ---- Highlight de menções no textarea (camada espelho atrás do texto) ----
+    // Renderiza o mesmo texto num div por baixo; menções viram chips com cara de link.
+    _ensureHighlightLayer(ta) {
+      const wrap = ta.closest('.cozy-input-wrap') || ta.parentElement;
+      let hl = wrap.querySelector('.mention-highlight');
+      if (!hl) {
+        hl = document.createElement('div');
+        hl.className = 'mention-highlight';
+        hl.setAttribute('aria-hidden', 'true');
+        wrap.insertBefore(hl, ta);
+        // espelha a tipografia exata do textarea
+        const sync = () => {
+          const cs = getComputedStyle(ta);
+          ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'padding', 'border', 'boxSizing']
+            .forEach((p) => { hl.style[p] = cs[p]; });
+          hl.style.whiteSpace = 'pre-wrap';
+          hl.style.wordWrap = 'break-word';
+        };
+        sync();
+        this._hlSync = sync;
+      }
+      return hl;
+    },
+    _renderMentionHighlight(ta) {
+      if (!ta || !document.body.contains(ta)) return;
+      const hl = this._ensureHighlightLayer(ta);
+      const val = ta.value || '';
+      let html = esc(val);
+      // menções @[Nome](t:id) → chip clicável
+      html = html.replace(/@\[([^\]]+)\]\(t:[a-z0-9]+\)/gi,
+        (_, name) => `<span class="mh-link">${esc(name)}</span>`);
+      // negrito **...** e __...__ → renderiza em bold
+      html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/(^|\s)__([^_\n]+)__/g, '$1<strong>$2</strong>');
+      // itálico *...* e _..._ (após negrito, evita conflito)
+      html = html.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+      html = html.replace(/(^|[^_\w])_([^_\n]+)_/g, '$1<em>$2</em>');
+      hl.innerHTML = html + '\n';
+    },
+    clearMentionHighlight(ta) {
+      const wrap = ta && ta.closest && ta.closest('.cozy-input-wrap');
+      const hl = wrap && wrap.querySelector('.mention-highlight');
+      if (hl) hl.innerHTML = '';
     },
 
     // ---------- Lembretes (Notification API) ----------

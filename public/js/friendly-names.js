@@ -115,7 +115,7 @@
           n.setAttribute('data-friendly-name', `${isFolder ? 'Pasta' : 'Caderno'}: ${label}`);
         }
         // Composer sub-componentes
-        if (n.id === 'composer-input') n.setAttribute('data-friendly-name', 'Input: Escreva sua anotação');
+        if (n.id === 'composer-input') n.setAttribute('data-friendly-name', 'Input: Enviar mensagem');
         if (n.id === 'btn-send') n.setAttribute('data-friendly-name', 'Input: Botão Enviar (→)');
         if (n.id === 'btn-attach') n.setAttribute('data-friendly-name', 'Input: Anexar');
         if (n.closest && n.closest('.md-check')) {
@@ -127,7 +127,7 @@
   observer.observe(document.body, { childList: true, subtree: true });
 
   // Inicializa elementos já existentes no DOM
-  document.querySelectorAll('#composer-input').forEach(el => el.setAttribute('data-friendly-name', 'Input: Escreva sua anotação'));
+  document.querySelectorAll('#composer-input').forEach(el => el.setAttribute('data-friendly-name', 'Input: Enviar mensagem'));
   document.querySelectorAll('#btn-send').forEach(el => el.setAttribute('data-friendly-name', 'Input: Botão Enviar'));
   document.querySelectorAll('#btn-attach').forEach(el => el.setAttribute('data-friendly-name', 'Input: Anexar'));
   document.querySelectorAll('.fmt-btn').forEach(el => {

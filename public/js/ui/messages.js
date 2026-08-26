@@ -1,4 +1,4 @@
-import { PAGE_SIZE, esc, fmtTime, now, haptic, $ } from '../utils.js';
+import { PAGE_SIZE, esc, fmtTime, now, haptic, $, hideWithExit } from '../utils.js';
 import { ICON, wrapSvg } from '../icons.js';
 import { renderMarkdown } from '../markdown.js';
 import { Store } from '../store.js';
@@ -41,10 +41,45 @@ export const MessagesMethods = {
         });
       });
       if (!backlinks.length) { container.classList.add('hidden'); container.innerHTML = ''; return; }
-      container.innerHTML = `<div class="backlinks-title">Mencionado em ${backlinks.length} nota${backlinks.length!==1?'s':''}</div>` +
-        backlinks.map(b => `<div class="backlink-item" data-tid="${b.tid}" data-cid="${b.n.clientId}"><span class="backlink-thread">${esc(b.th ? b.th.name : 'Conversa')}</span><span class="backlink-snippet">${esc(b.n.text.slice(0,60))}</span></div>`).join('');
+      // backlinks agora vivem no dropdown do nome da nota
       container.classList.remove('hidden');
-      container.querySelectorAll('.backlink-item').forEach(el => el.addEventListener('click', () => {
+      const countEl = document.getElementById('menu-backlinks-count');
+      const menuItem = document.getElementById('menu-backlinks');
+      if (countEl) countEl.textContent = backlinks.length;
+      if (menuItem) {
+        menuItem.classList.remove('hidden');
+        if (!menuItem.dataset.bound) {
+          menuItem.addEventListener('click', () => {
+            document.getElementById('chat-title-menu').classList.add('hidden');
+            this.toggleBacklinksPopover(backlinks);
+          });
+          menuItem.dataset.bound = '1';
+        }
+      }
+    },
+    toggleBacklinksPopover(backlinks) {
+      let pop = document.getElementById('backlinks-popover');
+      if (!pop) {
+        pop = document.createElement('div');
+        pop.id = 'backlinks-popover';
+        pop.className = 'popover backlinks-popover hidden';
+        pop.setAttribute('role', 'dialog');
+        document.body.appendChild(pop);
+      }
+      // toggle: se aberto, fecha
+      if (!pop.classList.contains('hidden')) { pop.classList.add('hidden'); return; }
+      pop.innerHTML = `<div class="bl-title">Mencionado em ${backlinks.length} nota${backlinks.length !== 1 ? 's' : ''}</div>` +
+        backlinks.map(b => `<div class="bl-item" data-tid="${b.tid}" data-cid="${b.n.clientId}"><span class="backlink-thread">${esc(b.th ? b.th.name : 'Conversa')}</span><span class="backlink-snippet">${esc(b.n.text.slice(0, 60))}</span></div>`).join('');
+      pop.classList.remove('hidden');
+      const anchor = document.getElementById('backlinks-badge').getBoundingClientRect();
+      const pw = Math.min(320, window.innerWidth - 24);
+      pop.style.width = pw + 'px';
+      let left = anchor.right + 10;
+      if (left + pw > window.innerWidth - 8) left = Math.max(8, anchor.left - pw - 10);
+      pop.style.left = left + 'px';
+      pop.style.top = Math.max(8, Math.min(anchor.top, window.innerHeight - 220)) + 'px';
+      pop.querySelectorAll('.bl-item').forEach(el => el.addEventListener('click', () => {
+        pop.classList.add('hidden');
         this.openThread(el.dataset.tid);
         setTimeout(() => this.scrollToNote(el.dataset.cid), 300);
       }));
@@ -53,6 +88,80 @@ export const MessagesMethods = {
       const el = $('#chat-active-ui');
       if (!el) return;
       el.classList.toggle('visible', show);
+      if (show) this._bindChatTitleMenu();
+    },
+
+    // ---------- Popover de opções da nota (botão ⋮ do banner) ----------
+    _bindChatTitleMenu() {
+      const nameEl = document.getElementById('chat-name');
+      const trigger = document.getElementById('btn-thread-menu');
+      const menu = document.getElementById('chat-title-menu');
+      if (!trigger || !menu || trigger.dataset.menuBound) return;
+      trigger.dataset.menuBound = '1';
+      // IMPORTANTE: move o menu para o <body>. Dentro de .chat-active-ui ele é
+      // cortado (overflow:hidden) e deslocado (transform quebra position:fixed).
+      if (menu.parentElement !== document.body) document.body.appendChild(menu);
+      const openMenu = () => {
+        if (!this.activeThread) return;
+        if (!menu.classList.contains('hidden')) { menu.classList.add('hidden'); return; }
+        menu.classList.remove('hidden');
+        menu.style.visibility = 'hidden';
+        const r = trigger.getBoundingClientRect();
+        const mw = menu.offsetWidth || 220, mh = menu.offsetHeight || 180;
+        // alinha a DIREITA do menu com a direita do botão, depois clamp para dentro da tela
+        let left = r.right - mw + 8;
+        left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+        let top = r.bottom + 6;
+        top = Math.max(8, Math.min(top, window.innerHeight - mh - 8));
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        menu.style.visibility = '';
+      };
+      trigger.addEventListener('click', (e) => { e.stopPropagation(); openMenu(); });
+      document.addEventListener('click', (e) => {
+        if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !trigger.contains(e.target)) {
+          menu.classList.add('hidden');
+        }
+      });
+      // Renomear
+      const renameBtn = menu.querySelector('[data-act="rename"]');
+      if (renameBtn && !renameBtn.dataset.bound) {
+        renameBtn.addEventListener('click', () => {
+          menu.classList.add('hidden');
+          const th = Store.getThread(this.activeThread);
+          if (!th) return;
+          this.showModal('Renomear conversa', `<input id="rename-input" type="text" value="${esc(th.name)}" maxlength="60" style="width:100%" />`, () => {
+            const v = ($('#rename-input') || {}).value?.trim();
+            if (v && v !== th.name) {
+              Store.upsertThread({ id: th.id, name: v, updatedAt: Date.now() });
+              Sync.send('thread:rename', { id: th.id, name: v });
+              $('#chat-name').textContent = v;
+              this.queueRenderTree();
+              this.toast('Conversa renomeada ✓', { kind: 'success' });
+            }
+          });
+          setTimeout(() => { const inp = $('#rename-input'); if (inp) { inp.focus(); inp.select(); } }, 50);
+        });
+        renameBtn.dataset.bound = '1';
+      }
+      // Excluir
+      const deleteBtn = menu.querySelector('[data-act="delete"]');
+      if (deleteBtn && !deleteBtn.dataset.bound) {
+        deleteBtn.addEventListener('click', () => {
+          menu.classList.add('hidden');
+          if (this.activeThread) this.confirmDeleteThread(this.activeThread);
+        });
+        deleteBtn.dataset.bound = '1';
+      }
+      // Convidar (multiusuário) — placeholder até a feature de compartilhamento
+      const inviteBtn = menu.querySelector('[data-act="invite"]');
+      if (inviteBtn && !inviteBtn.dataset.bound) {
+        inviteBtn.addEventListener('click', () => {
+          menu.classList.add('hidden');
+          this.toast('Convidar pessoas para uma conversa — em breve!', { kind: 'info', duration: 3000 });
+        });
+        inviteBtn.dataset.bound = '1';
+      }
     },
 
     // aplica (ou limpa) a cor do caderno no cabeçalho banner, conforme o setting headerMatchColor
@@ -92,6 +201,17 @@ export const MessagesMethods = {
       return L > 0.4 ? '#1f1a17' : '#ffffff';
     },
 
+    // CTA "Nova anotação" no empty state do canvas — replica o botão da sidebar
+    _bindEmptyCta() {
+      const cta = $('#es-new-note');
+      if (!cta || cta._bound) return;
+      cta._bound = true;
+      cta.addEventListener('click', () => {
+        const primary = $('#btn-new-thread');
+        if (primary) primary.click();
+      });
+    },
+
     renderMessages(reset) {
       const box = $('#messages');
       const empty = $('#empty-state');
@@ -100,6 +220,7 @@ export const MessagesMethods = {
         empty.classList.remove('hidden');
         $('#load-older').classList.add('hidden');
         box.querySelectorAll('.bubble, .day-sep').forEach((n) => n.remove());
+        this._bindEmptyCta();
         return;
       }
       empty.classList.add('hidden');
@@ -124,18 +245,28 @@ export const MessagesMethods = {
       });
       box.insertBefore(frag, before || loader);
       if (reset) box.scrollTop = box.scrollHeight;
+      // M1 fix: animação de entrada só em bolhas novas; classe removida após animar
+      // (no reset inicial da thread NENHUMA bolha anima — a thread aparece pronta)
+      if (!reset) {
+        box.querySelectorAll('.bubble.is-new').forEach((el) => {
+          el.addEventListener('animationend', () => el.classList.remove('is-new'), { once: true });
+        });
+      } else {
+        box.querySelectorAll('.bubble.is-new').forEach((el) => el.classList.remove('is-new'));
+      }
     },
 
-    bubbleEl(n) {
+    bubbleEl(n, opts) {
       const div = document.createElement('div');
       const clientId = n.clientId; // escopo p/ os handlers abaixo
       const mine = n.userId === (Store.user && Store.user.mail) || n.local;
       const thread = Store.getThread(this.activeThread);
       const isPinned = thread && thread.pinnedId === n.clientId;
       let cozyExtra = '';
-      if (n.text && /^\s*\[( |x)\]/m.test(n.text)) cozyExtra = ' bubble-checklist';
-      else if (n.text && /ideia:/i.test(n.text)) cozyExtra = ' bubble-idea';
-      div.className = 'bubble' + (mine ? '' : ' remote') + (n.pending ? ' pending' : '') + (isPinned ? ' pinned' : '') + cozyExtra;
+      if (n.text && /ideia:/i.test(n.text)) cozyExtra = ' bubble-idea';
+      // M1 fix: .is-new anima só bolhas novas (classe removida no animationend)
+      div.className = 'bubble' + (mine ? '' : ' remote') + (n.pending ? ' pending' : '') + (isPinned ? ' pinned' : '') + cozyExtra
+        + (opts && opts.isNew ? ' is-new' : '');
       div.dataset.clientId = n.clientId;
       div.dataset.day = new Date(n.ts).toDateString();
       div.setAttribute('draggable', 'true');
@@ -196,9 +327,28 @@ export const MessagesMethods = {
           catch (err) { console.error('[checklist] falha ao alternar:', err); }
         });
       });
-      // Menções @: clicar abre a thread referenciada
+      // Menções @: 1 clique = preview popover; 2 cliques = abre a nota
       div.querySelectorAll('.mention').forEach((m) => {
-        m.addEventListener('click', (e) => { e.stopPropagation(); const tid = m.dataset.tid; if (Store.getThread(tid)) this.openThread(tid); });
+        m.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const now = Date.now();
+          const last = this._mentionLastClick || 0;
+          if (now - last < 350) {
+            // duplo clique → abre a nota direto
+            clearTimeout(this._mentionTimer);
+            this._mentionLastClick = 0;
+            this.closeNotePreview();
+            this.openThread(m.dataset.tid);
+            return;
+          }
+          // clique simples → preview (com delay para permitir o segundo clique)
+          this._mentionLastClick = now;
+          clearTimeout(this._mentionTimer);
+          this._mentionTimer = setTimeout(() => {
+            this._mentionLastClick = 0;
+            this.showNotePreview(m.dataset.tid);
+          }, 260);
+        });
       });
 
       return div;
@@ -237,6 +387,24 @@ export const MessagesMethods = {
         }
       }
       this._replaceBubble(clientId, n);
+      // aviso quando todas as checkboxes estão marcadas
+      this._checkListComplete(clientId, n);
+    },
+    _checkListComplete(clientId, n) {
+      const lines = (n.text || '').split('\n').filter((l) => /^\s*\[( |x)\]/i.test(l));
+      if (!lines.length) return;
+      const allDone = lines.every((l) => /\[\s*x\s*\]/i.test(l));
+      if (allDone) {
+        const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
+        if (el && !el.querySelector('.chk-complete')) {
+          const badge = document.createElement('div');
+          badge.className = 'chk-complete';
+          badge.textContent = '✓ Lista completa!';
+          el.appendChild(badge);
+          setTimeout(() => badge.remove(), 3000);
+        }
+        this.toast('✓ Lista completa!', { kind: 'success', duration: 2500 });
+      }
     },
 
     openLightbox(src) {
@@ -414,12 +582,13 @@ export const MessagesMethods = {
       const arr = Store.notesFor(this.activeThread); const n = arr.find((x) => x.clientId === clientId); if (!n) return;
       const meta = el.querySelector('.meta'); const toggle = el.querySelector('.msg-toggle');
       const pinBadge = el.querySelector('.pin-badge');
+      // guarda meta/toggle/badge FORA da bolha durante a edição — assim só o corpo é editável
+      this._editDetached = [];
+      [meta, toggle, pinBadge].forEach((x) => { if (x) { this._editDetached.push(x); x.remove(); } });
       el.setAttribute('contenteditable', 'true');
       el.classList.add('editing');
       el.textContent = n.text;
-      if (meta) el.appendChild(meta);
-      if (toggle) el.appendChild(toggle);
-      if (pinBadge) el.insertBefore(pinBadge, el.firstChild);
+      if (pinBadge) { this._editDetached.unshift(pinBadge); }
 
       const sel = window.getSelection(); const range = document.createRange();
       range.selectNodeContents(el); range.collapse(false);
@@ -432,16 +601,23 @@ export const MessagesMethods = {
         el.classList.remove('editing');
         el.removeEventListener('keydown', onKey);
         el.removeEventListener('blur', onBlur);
+        // recoloca meta/toggle/badge que foram guardados fora durante a edição
+        // (só se a bolha não for substituída — _replaceBubble re-renderiza tudo)
+        if (this._editDetached && this._editDetached.length) {
+          this._editDetached.forEach((x) => { if (x && !el.contains(x)) { if (x.classList.contains('pin-badge')) el.insertBefore(x, el.firstChild); else el.appendChild(x); } });
+          this._editDetached = null;
+        }
         if (save) {
-          // lê SÓ o texto digitado — ignora meta/toggle (antes textContent incluía "10:30" → timer duplicado)
+          // lê SÓ o texto digitado — meta/toggle agora estão fora, mas mantém o clone por segurança
           const clone = el.cloneNode(true);
           clone.querySelectorAll('.meta,.msg-toggle,.pin-badge,.md-checklist').forEach((r) => r.remove());
-          const v = clone.textContent.replace(/\s+$/, '').trim() || clone.textContent.replace(/[\n\r]+$/, '');
+          const v = clone.textContent.replace(/\s+$/, '').trim();
           if (v && v !== n.text) {
             const updated = Store.editNote(this.activeThread, clientId, v);
             if (updated) {
               Sync.send('note:edit', { threadId: this.activeThread, clientId, text: updated.text, edited: updated.edited, editedAt: updated.editedAt, rev: updated.rev });
               this.renderedClientIds.delete(clientId);
+              this._editDetached = null; // bolha será re-renderizada do zero
               this._replaceBubble(clientId, Store.notesFor(this.activeThread).find((x) => x.clientId === clientId) || updated);
               return;
             }
@@ -509,6 +685,11 @@ export const MessagesMethods = {
       this.renderedClientIds = new Set();
       this.renderMessages(true);
       this.updatePinButton();
+      // A3 delight: badge dourado popa com ease-out-back ao fixar
+      if (newPin != null) {
+        const el = document.querySelector(`.bubble[data-client-id="${clientId}"]`);
+        if (el) { el.classList.add('pin-anim'); setTimeout(() => el.classList.remove('pin-anim'), 400); }
+      }
       Sound.play('pin'); haptic('medium');
     },
 
@@ -528,25 +709,78 @@ export const MessagesMethods = {
       const pinned = th ? Store.getPinned(this.activeThread) : null;
       this.dom.btnPin.classList.toggle('hidden', !th);
       this.dom.btnPin.classList.toggle('has-pin', !!pinned);
+      // sem pin: botão fica esmaecido (indisponível), mas clicável p/ mostrar aviso no mobile
+      this.dom.btnPin.classList.toggle('no-pin', !pinned);
+      // tooltip nativo no desktop; no mobile o aviso vem via toast no clique
+      this.dom.btnPin.title = pinned
+        ? 'Mensagem fixada'
+        : 'Nenhuma mensagem fixada ainda — use o menu ⋮ de uma nota para fixá-la';
     },
     togglePinPopover() {
       const th = Store.getThread(this.activeThread);
       const pinned = th ? Store.getPinned(this.activeThread) : null;
-      if (!pinned) { this.dom.pinPopover.classList.add('hidden'); return; }
+      if (!pinned) {
+        this.dom.pinPopover.classList.add('hidden');
+        // desktop: tooltip nativo; mobile: toast explicativo
+        if (window.matchMedia('(hover: none)').matches) {
+          this.toast('📌 Nenhuma mensagem fixada ainda. Pine uma mensagem pelo menu ⋮ da nota.', { kind: 'info', duration: 3500 });
+        }
+        return;
+      }
+      // fecha o preview de nota se aberto
+      this.closeNotePreview();
+      // toggle: se já está aberto, fecha (M2: com animação de saída)
+      if (!this.dom.pinPopover.classList.contains('hidden')) { hideWithExit(this.dom.pinPopover); return; }
       // preenche conteúdo
       this.dom.pinBody.innerHTML = `<div>${esc(pinned.text)}</div><span class="ts">${fmtTime(pinned.ts)}${pinned.edited ? ' · editada' : ''}</span>`;
       this.dom.pinPopover.dataset.clientId = pinned.clientId;
       this.dom.pinPopover.classList.remove('hidden');
-      // posiciona abaixo do botão pin (canto superior esquerdo da área de mensagens)
+      // posiciona na coluna esquerda do fluxo (abaixo do botão pin), até 30% da largura
       const r = this.dom.btnPin.getBoundingClientRect();
-      const pw = Math.min(480, window.innerWidth - 24), ph = 240;
+      const pw = Math.min(Math.max(280, window.innerWidth * 0.3), window.innerWidth - 24);
       let left = r.left;
       let top = r.bottom + 8;
       if (left < 8) left = 8;
       if (left + pw > window.innerWidth) left = window.innerWidth - pw - 8;
-      if (top + ph > window.innerHeight) top = r.top - ph - 8;
       this.dom.pinPopover.style.left = left + 'px';
       this.dom.pinPopover.style.top = top + 'px';
+      this.dom.pinPopover.style.width = pw + 'px';
+    },
+    // ---------- Preview de nota linkada (@[...](t:id)) ----------
+    // card estilo pin popover, fixo na coluna esquerda, SEM botão "abrir" (abre por duplo clique)
+    showNotePreview(threadId) {
+      const th = Store.getThread(threadId);
+      if (!th) return;
+      const notes = Store.notesFor(threadId) || [];
+      const last = notes.length ? notes[notes.length - 1] : null;
+      const pop = document.getElementById('note-preview');
+      if (!pop) return;
+      document.getElementById('np-thread').textContent = th.name || 'Nota';
+      const body = last
+        ? esc((last.text || '').replace(/^(\s*)\[( |x)\]\s*/gm, '').slice(0, 260))
+        : '<em>Conversa vazia — nenhuma mensagem ainda.</em>';
+      document.getElementById('np-body').innerHTML = `<div>${body}</div>`;
+      const closeBtn = document.getElementById('np-close');
+      if (closeBtn && !closeBtn.dataset.bound) {
+        closeBtn.addEventListener('click', () => this.closeNotePreview());
+        closeBtn.dataset.bound = '1';
+      }
+      // botão "Abrir nota" do preview → abre a thread da menção
+      pop.dataset.tid = threadId;
+      const openBtn = document.getElementById('np-open');
+      if (openBtn && !openBtn.dataset.bound) {
+        openBtn.addEventListener('click', () => {
+          const tid = document.getElementById('note-preview').dataset.tid;
+          this.closeNotePreview();
+          if (tid) this.openThread(tid);
+        });
+        openBtn.dataset.bound = '1';
+      }
+      pop.classList.remove('hidden');
+    },
+    closeNotePreview() {
+      const pop = document.getElementById('note-preview');
+      if (pop) pop.classList.add('hidden');
     },
     bindPinPopover() {
       this.dom.pinPopover.querySelector('#pin-jump').addEventListener('click', () => {
@@ -568,6 +802,19 @@ export const MessagesMethods = {
       });
     },
 
+    // skeleton temporário no topo do fluxo enquanto carrega página anterior
+    _showLoadSkeleton() {
+      const box = $('#messages');
+      const sk = document.createElement('div');
+      sk.className = 'load-skeleton-group';
+      sk.innerHTML = '<div class="skeleton" style="width:70%"></div><div class="skeleton skeleton-them" style="width:55%"></div><div class="skeleton" style="width:64%"></div>';
+      box.insertBefore(sk, box.firstChild);
+      return sk;
+    },
+    _hideLoadSkeleton(sk) {
+      if (sk && sk.parentNode) sk.parentNode.removeChild(sk);
+    },
+
     setupInfiniteScroll() {
       const box = $('#messages');
       box.addEventListener('scroll', async () => {
@@ -586,9 +833,10 @@ export const MessagesMethods = {
           this.loading = false;
           return;
         }
-        // local esgotado → tenta buscar no servidor (Supabase .range)
+        // local esgotado → tenta buscar no servidor (Supabase .range) — com skeleton
         if (!Sync.fetchNotesPage) return;
         this.loading = true;
+        const skel = this._showLoadSkeleton();
         try {
           const serverItems = await Sync.fetchNotesPage(this.activeThread, this.oldestTs, PAGE_SIZE);
           if (!serverItems.length) return;
@@ -606,7 +854,7 @@ export const MessagesMethods = {
           box.insertBefore(frag, loader.nextSibling);
           box.scrollTop = box.scrollHeight - prevHeight + prevTop;
         } catch (e) { console.warn('fetch page fail', e); }
-        finally { this.loading = false; }
+        finally { this._hideLoadSkeleton(skel); this.loading = false; }
       });
     },
 };

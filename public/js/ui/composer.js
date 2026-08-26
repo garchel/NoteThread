@@ -4,7 +4,17 @@ import { Sync, getSupa, USE_SUPABASE } from '../sync-supabase.js';
 import { Sound } from '../sound.js';
 
 export const ComposerMethods = {
-bindComposer() {
+    // ---------- Banner de erro de sync no composer (retry inline) ----------
+    showSyncError() {
+      const b = $('#sync-error-banner');
+      if (b) b.classList.remove('hidden');
+    },
+    hideSyncError() {
+      const b = $('#sync-error-banner');
+      if (b) b.classList.add('hidden');
+    },
+
+    bindComposer() {
       const ta = $('#composer-input'), send = $('#btn-send');
       // auto-resize: cresce com o conteúdo até ~60vh, depois ativa scroll interno
       const MAX_VH = 0.60;
@@ -20,11 +30,20 @@ bindComposer() {
         ta.style.height = target + 'px';
         ta.style.overflowY = ta.scrollHeight > maxH ? 'auto' : 'hidden';
       };
-      ta.addEventListener('input', () => { resize(); send.disabled = ta.value.trim() === '' && !((this.pendingImages||[]).length); });
+      ta.addEventListener('input', () => { resize(); this._updateSendAudioState(ta, send); this._renderMentionHighlight(ta); });
+      // retry inline do banner de sync
+      const retryBtn = $('#sync-retry');
+      if (retryBtn) retryBtn.addEventListener('click', async () => {
+        retryBtn.disabled = true; retryBtn.textContent = 'Conectando…';
+        try { if (Sync.ws) Sync.ws.close(); } catch {}
+        Sync.connect();
+        setTimeout(() => { retryBtn.disabled = false; retryBtn.textContent = 'Tentar agora'; }, 2500);
+      });
       // autocomplete de menções @ (registrado ANTES do keydown de envio p/ interceptar Enter)
       this._initMentions(ta);
-      // também recalcula no resize da janela (limite 60vh muda)
-      window.addEventListener('resize', resize);
+      // highlight inicial (caso o rascunho já tenha menções) e ao abrir thread nova
+      setTimeout(() => this._renderMentionHighlight(ta), 0);
+      window.addEventListener('resize', () => { if (this._hlSync) this._hlSync(); });
       // inicializa com estado correto (evita scrollbar fantasma no carregamento)
       resize();
       ta.addEventListener('focus', () => {
@@ -49,27 +68,29 @@ bindComposer() {
         else if (mod && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); this.applyFormat('italic'); }
         else if (mod && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.applyFormat('code'); }
         else if (mod && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); this.applyFormat('checklist'); }
-        else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendNote(); }
+        else if (e.key === 'Enter' && !e.shiftKey) {
+          // mobile: Enter também continua listas (desktop usa Shift+Enter p/ enviar)
+          const isTouch = window.matchMedia('(hover: none)').matches;
+          if (isTouch && this._listContinuation(ta)) { e.preventDefault(); return; }
+          e.preventDefault(); this.sendNote();
+        }
         else if (e.key === 'Enter' && e.shiftKey) {
-          // Shift+Enter: quebra linha; se a linha atual é item de checklist ou bullet,
-          // continua a lista na próxima linha
+          // Shift+Enter: quebra linha; se a linha atual é item de checklist, bullet
+          // ou lista numerada, continua a lista na próxima linha
           e.preventDefault();
-          const pos = ta.selectionStart;
-          const lineStart = ta.value.lastIndexOf('\n', pos - 1) + 1;
-          const curLine = ta.value.slice(lineStart, pos);
-          let ins = '\n';
-          const mChk = curLine.match(/^(\[x\]|\[ \])\s+/i);
-          const mBul = curLine.match(/^(\s*)[-*]\s+/);
-          if (mChk) ins = '\n[ ] ';
-          else if (mBul) ins = '\n' + mBul[1] + '- ';
-          ta.value = ta.value.slice(0, pos) + ins + ta.value.slice(ta.selectionEnd);
-          ta.selectionStart = ta.selectionEnd = pos + ins.length;
-          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          this._listContinuation(ta);
         }
       });
       // barra de formatação
       document.querySelectorAll('.fmt-btn').forEach((b) => b.addEventListener('click', () => this.applyFormat(b.dataset.fmt)));
-      send.addEventListener('click', () => this.sendNote());
+      // botão único send/áudio: em modo áudio grava; com texto envia
+      send.addEventListener('click', () => {
+        if (this._audioMode) { this._startAudioRecording(send); return; }
+        if (this._recording) return;
+        this.sendNote();
+      });
+      // estado inicial do botão (microfone quando vazio)
+      this._updateSendAudioState(ta, send);
       // anexos
       const attach = this.dom.btnAttach, fileInput = this.dom.fileInput, prev = this.dom.attachPreview;
       attach.addEventListener('click', () => fileInput.click());
@@ -356,6 +377,37 @@ editThreadTitleInline() {
 
 applyFormat(kind) {
       const ta = $('#composer-input'); if (ta.disabled) return;
+      // bold/italic: TOGGLE de modo — enquanto ativo, as próximas palavras saem formatadas
+      if (kind === 'bold' || kind === 'italic') {
+        this._fmtMode = this._fmtMode || {};
+        // se há seleção, aplica wrap direto na seleção (comportamento clássico)
+        if (ta.selectionStart !== ta.selectionEnd) { this._wrapSelection(ta, kind); return; }
+        const wrap = kind === 'bold' ? '**' : '*';
+        if (this._fmtMode[kind]) {
+          // desliga: fecha o par aberto (se houver texto depois do último marcador)
+          this._fmtMode[kind] = false;
+          const pos = ta.selectionStart;
+          const before = ta.value.slice(0, pos), after = ta.value.slice(pos);
+          const marker = kind === 'bold' ? '**' : '*';
+          const lastOpen = before.lastIndexOf(marker);
+          if (lastOpen !== -1 && !before.slice(lastOpen + marker.length).includes(marker)) {
+            ta.value = ta.value.slice(0, pos) + marker + ta.value.slice(pos);
+            ta.selectionStart = ta.selectionEnd = pos;
+          }
+          this.toast(kind === 'bold' ? 'Negrito desligado' : 'Itálico desligado', { kind: 'info', duration: 1500 });
+        } else {
+          // liga: abre o par no cursor
+          this._fmtMode[kind] = true;
+          const marker2 = kind === 'bold' ? '**' : '*';
+          const pos = ta.selectionStart;
+          ta.value = ta.value.slice(0, pos) + marker2 + ta.value.slice(pos);
+          ta.selectionStart = ta.selectionEnd = pos + marker2.length;
+          this.toast(kind === 'bold' ? 'Negrito ligado — as próximas palavras sairão em negrito' : 'Itálico ligado — as próximas palavras sairão em itálico', { kind: 'info', duration: 1800 });
+        }
+        this._updateFmtToggleUI(ta);
+        ta.focus(); ta.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
       const start = ta.selectionStart, end = ta.selectionEnd;
       const sel = ta.value.slice(start, end);
       const before = ta.value.slice(0, start), after = ta.value.slice(end);
@@ -384,6 +436,33 @@ applyFormat(kind) {
           ta.value = lineHead + newLine + after;
           // cursor no fim do texto digitado (ou após "[ ] " se linha vazia)
           ta.selectionStart = ta.selectionEnd = lineStart + newLine.length;
+        }
+        ta.focus(); ta.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      } else if (kind === 'ordered-list') {
+        // lista numerada: numera cada linha da seleção (ou insere "1. " no cursor se vazio)
+        const inner = sel || '';
+        let listed;
+        const stripNum = (l) => l.replace(/^\d+\.\s+/, '');
+        if (inner) {
+          let n = 1;
+          listed = inner.split('\n').map((l) => {
+            const clean = stripNum(l);
+            return n++ + '. ' + clean;
+          }).join('\n');
+          ta.value = before + listed + after;
+          ta.selectionStart = start; ta.selectionEnd = start + listed.length;
+        } else {
+          const lineStart = before.lastIndexOf('\n') + 1;
+          const lineHead = before.slice(0, lineStart);
+          const curLine = before.slice(lineStart);
+          // continua a numeração se a linha anterior já é item numerado
+          const prevMatch = lineHead.match(/(\d+)\.\s+[^\n]*\n?$/) || curLine.match(/^(\d+)\.\s+/);
+          const next = prevMatch ? parseInt(prevMatch[1], 10) + 1 : 1;
+          const prefix = next + '. ';
+          const newBefore = lineHead + prefix + stripNum(curLine);
+          ta.value = newBefore + after;
+          ta.selectionStart = ta.selectionEnd = newBefore.length;
         }
         ta.focus(); ta.dispatchEvent(new Event('input', { bubbles: true }));
         return;
@@ -420,6 +499,103 @@ applyFormat(kind) {
       ta.dispatchEvent(new Event('input', { bubbles: true }));
     },
 
+    // envolve a seleção com marcador (bold/italic clássico sobre texto selecionado)
+    _wrapSelection(ta, kind) {
+      const wrap = kind === 'bold' ? '**' : '*';
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      const inner = ta.value.slice(start, end);
+      ta.value = ta.value.slice(0, start) + wrap + inner + wrap + ta.value.slice(end);
+      ta.selectionStart = start + wrap.length;
+      ta.selectionEnd = start + wrap.length + inner.length;
+      this._updateFmtToggleUI(ta);
+      ta.focus(); ta.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+
+    // atualiza estado visual dos botões toggle (bold/italic) conforme o modo ativo
+    // e o modo é desligado automaticamente se o par de marcadores já foi fechado no texto
+    _updateFmtToggleUI(ta) {
+      document.querySelectorAll('.fmt-btn.fmt-toggle').forEach((b) => {
+        const k = b.dataset.fmt;
+        const active = !!(this._fmtMode && this._fmtMode[k]);
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', String(active));
+      });
+      this._renderMentionHighlight(ta);
+    },
+
+    // Shift+Enter / Enter(mobile): continua checklist, bullet ou lista numerada
+    _listContinuation(ta) {
+      const pos = ta.selectionStart;
+      const lineStart = ta.value.lastIndexOf('\n', pos - 1) + 1;
+      const curLine = ta.value.slice(lineStart, pos);
+      let ins = '\n';
+      const mChk = curLine.match(/^(\[x\]|\[ \])\s+/i);
+      const mBul = curLine.match(/^(\s*)[-*]\s+/);
+      const mNum = curLine.match(/^(\s*)(\d+)[.)]\s+/);
+      if (mChk) ins = '\n[ ] ';
+      else if (mNum) ins = '\n' + mNum[1] + (parseInt(mNum[2], 10) + 1) + '. ';
+      else if (mBul) ins = '\n' + mBul[1] + '- ';
+      else return false; // não é lista — deixa o chamador decidir (enviar nota)
+      ta.value = ta.value.slice(0, pos) + ins + ta.value.slice(ta.selectionEnd);
+      ta.selectionStart = ta.selectionEnd = pos + ins.length;
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    },
+
+    // botão único send/áudio: com texto (ou anexo) mostra ✈ enviar; vazio mostra 🎤 gravar
+    _updateSendAudioState(ta, send) {
+      const hasContent = ta.value.trim() !== '' || ((this.pendingImages || []).length > 0);
+      this._audioMode = !hasContent;
+      send.classList.toggle('audio-mode', this._audioMode);
+      send.disabled = false; // áudio está sempre disponível
+      const micSvg = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+      const sendSvg = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+      const want = this._audioMode ? micSvg : sendSvg;
+      if (!send.innerHTML.includes(this._audioMode ? 'M12 1a3' : 'x1="22"')) {
+        send.innerHTML = want;
+        send.setAttribute('aria-label', this._audioMode ? 'Gravar áudio' : 'Enviar');
+        send.title = this._audioMode ? 'Gravar áudio' : 'Enviar';
+      }
+    },
+
+    // gravação de áudio via MediaRecorder; envia como anexo de áudio na nota
+    async _startAudioRecording(send) {
+      if (this._recording) {
+        // parar e enviar
+        this._mediaRecorder.stop();
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const rec = new MediaRecorder(stream);
+        const chunks = [];
+        rec.ondataavailable = (e) => chunks.push(e.data);
+        rec.onstop = () => {
+          stream.getTracks().forEach((t) => t.stop());
+          const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+          const duration = Math.round((Date.now() - this._recStart) / 1000);
+          this._recording = false;
+          clearInterval(this._recTimer);
+          send.classList.remove('recording');
+          if (duration < 1) { this.toast('Gravação muito curta', { kind: 'info' }); return; }
+          const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type });
+          (this.pendingImages = this.pendingImages || []).push(file);
+          this.renderAttachPreview();
+          this.toast(`Áudio de ${duration}s anexado`, { kind: 'success' });
+        };
+        this._mediaRecorder = rec;
+        this._recStart = Date.now();
+        this._recording = true;
+        rec.start();
+        send.classList.add('recording');
+        let secs = 0;
+        this._recTimer = setInterval(() => { secs++; send.title = `Gravando… ${secs}s (clique para parar)`; }, 1000);
+        this.toast('Gravando áudio — clique novamente para parar', { kind: 'info', duration: 2500 });
+      } catch (err) {
+        this.toast('Não foi possível acessar o microfone', { kind: 'error' });
+      }
+    },
+
     sendNote() {
       const ta = $('#composer-input');
       const text = ta.value.trim();
@@ -454,19 +630,24 @@ markSent(clientId) {
       }
     },
 
-appendNoteRealtime(n) {
+appendNoteRealtime(n, fromRemote) {
       const box = $('#messages');
       $('#empty-state').classList.add('hidden');
       // echo guard: se a bolha já está no DOM (enviada por ESTE dispositivo), não duplica
       const existing = box.querySelector(`.bubble[data-client-id="${n.clientId}"]`);
       if (existing) { existing.classList.remove('pending'); return; }
-      const el = this.bubbleEl(n);
-      el.classList.add('just-sent');
+      const el = this.bubbleEl(n, { isNew: true });
+      if (!fromRemote) {
+        // envio próprio: pop com spring (A2)
+        el.classList.add('just-sent');
+      }
       box.appendChild(el);
       box.scrollTop = box.scrollHeight;
       const meta = el.querySelector('.meta'); if (meta) meta.textContent = fmtTime(n.ts);
       el.classList.remove('pending');
-      setTimeout(() => el.classList.remove('just-sent'), 320);
+      // M1 fix: limpa .is-new após a entrada para não re-animar em renders futuros
+      el.addEventListener('animationend', () => el.classList.remove('is-new'), { once: true });
+      setTimeout(() => { if (!fromRemote) el.classList.remove('just-sent'); }, 320);
     },
 
 deleteNote(clientId) {

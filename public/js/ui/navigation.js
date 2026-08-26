@@ -113,7 +113,12 @@ export const NavigationMethods = {
       // ordena: nota mais recente primeiro
       hits.sort((a, b) => (b.n ? b.n.ts : 0) - (a.n ? a.n.ts : 0));
       if (!hits.length) {
-        results.innerHTML = '<div class="sr-empty">Nenhum resultado para "' + esc(q) + '"</div>';
+        // dica contextual conforme o filtro usado
+        let hint = 'Tente outras palavras ou remova filtros.';
+        if (p.tagFilter) hint = 'Nenhuma mensagem com #' + esc(p.tagFilter) + '. Verifique a grafia da tag.';
+        else if (p.inFilter) hint = 'Nenhuma conversa com esse nome. Verifique a grafia ou crie uma nova.';
+        else if (p.depois || p.antes) hint = 'Nenhuma mensagem nesse período. Tente ampliar as datas.';
+        results.innerHTML = '<div class="sr-empty"><div class="sr-empty-title">Nenhum resultado para "' + esc(q) + '"</div><div class="sr-empty-hint">' + hint + '</div></div>';
         results.classList.remove('hidden');
         return;
       }
@@ -211,6 +216,8 @@ export const NavigationMethods = {
         }
         // Esc → fecha popovers/modal ou limpa busca com filtros
         if (e.key === 'Escape') {
+          // modal aberto: ele mesmo já tratou (focus trap) — não processar aqui
+          if (this.dom.modal && !this.dom.modal.classList.contains('hidden')) return;
           const searchHasValue = this.dom.searchInput && this.dom.searchInput.value.trim();
           if (searchHasValue && !typing) {
             this.dom.searchInput.value = '';

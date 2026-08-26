@@ -45,9 +45,11 @@ bindTreeActions() {
         useEmoji = ntToggle.checked;
         $('#nt-glyphs').classList.toggle('hidden', useEmoji);
         $('#nt-emojis').classList.toggle('hidden', !useEmoji);
-        if (useEmoji) this._bindPicker('nt-emoji', '💬', (e) => { chosen = e; });
+        if (useEmoji) { this._bindPicker('nt-emoji', '💬', (e) => { chosen = e; }); this.ensureEmojiCats && this.ensureEmojiCats('nt-emoji', '💬'); }
+      this.ensureEmojiCats && this.ensureEmojiCats('nt-emoji', '💬');
       });
       this._bindPicker('nt-emoji', '💬', (e) => { chosen = e; });
+      this.ensureEmojiCats && this.ensureEmojiCats('nt-emoji', '💬');
       setTimeout(() => $('#nt-name') && $('#nt-name').focus(), 50);
     },
 
@@ -85,9 +87,11 @@ bindTreeActions() {
         useEmojiFolder = nfToggle.checked;
         $('#nf-glyphs').classList.toggle('hidden', useEmojiFolder);
         $('#nf-emojis').classList.toggle('hidden', !useEmojiFolder);
-        if (useEmojiFolder) this._bindPicker('nf-emoji', '📁', (e) => { chosen = e; });
+        if (useEmojiFolder) { this._bindPicker('nf-emoji', '📁', (e) => { chosen = e; }); this.ensureEmojiCats && this.ensureEmojiCats('nf-emoji', '📁'); }
+      this.ensureEmojiCats && this.ensureEmojiCats('nf-emoji', '📁');
       });
       this._bindPicker('nf-emoji', '📁', (e) => { chosen = e; });
+      this.ensureEmojiCats && this.ensureEmojiCats('nf-emoji', '📁');
       setTimeout(() => $('#nf-name') && $('#nf-name').focus(), 50);
     },
 
@@ -138,6 +142,8 @@ folderNode(f) {
       const fglyph = glyphSvg(f.emoji);
       const fInner = fglyph || esc(f.emoji || '📁');
       const isGlyphF = !!fglyph;
+      // alinha com as notas: mesmo padding-left (8px) — a arrow twist já reserva o espaço
+      row.style.paddingLeft = '8px';
       const fico = `<span class="caderno-ico" style="width:52px;height:52px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;background:${fcol.bg};color:${fcol.fg};font-size:${isGlyphF ? '0' : '22px'};box-shadow:var(--shadow-sm)">${isGlyphF ? fInner.replace('<svg ', '<svg style="width:26px;height:26px" ') : fInner}</span>`;
       row.innerHTML = `<span class="twist">${wrapSvg(ICON.chevron, 10)}</span><span class="ico">${fico}</span>
                        <span class="label">${esc(f.name)}</span><span class="count">${kids.length || ''}</span>`;
@@ -147,8 +153,8 @@ folderNode(f) {
         row.classList.toggle('collapsed', !v);
         const ch = row.nextElementSibling;
         if (ch && ch.classList.contains('children')) {
-          if (v) { ch.style.maxHeight = ch.scrollHeight + 'px'; setTimeout(() => { ch.style.maxHeight = 'none'; }, 240); }
-          else { ch.style.maxHeight = ch.scrollHeight + 'px'; requestAnimationFrame(() => { ch.style.maxHeight = '0px'; }); }
+          // M3 fix: toggle via grid-template-rows (0fr↔1fr) — sem max-height/jank
+          ch.classList.toggle('expanded', v);
         }
       });
       // menu de contexto na pasta (reutiliza thread ctx levemente)
@@ -168,24 +174,26 @@ folderNode(f) {
       const wrap = document.createElement('div');
       wrap.appendChild(row);
       const children = document.createElement('div');
-      children.className = 'children';
-      if (!expanded) children.style.maxHeight = '0px';
-      kids.forEach((t) => children.appendChild(this.threadNode(t, 1)));
+      children.className = 'children' + (expanded ? ' expanded' : '');
+      const inner = document.createElement('div');
+      inner.className = 'children-inner';
+      children.appendChild(inner);
+      kids.forEach((t) => inner.appendChild(this.threadNode(t, 1)));
       if (!kids.length) {
         // estado vazio da pasta: ícone + texto + ação direta de criar nota
         const empty = document.createElement('button');
         empty.type = 'button';
         empty.className = 'folder-empty';
-        empty.title = 'Criar uma anotação nesta pasta';
+        empty.title = 'Criar uma conversa nesta pasta';
         empty.innerHTML = `<span class="fe-ic">${wrapSvg(ICON.plus, 14)}</span>
-                           <span class="fe-text"><strong>Pasta vazia</strong><small>Clique para criar a primeira anotação</small></span>`;
+                           <span class="fe-text"><strong>Pasta vazia</strong><small>Clique para criar a primeira conversa</small></span>`;
         empty.addEventListener('click', (e) => {
           e.stopPropagation();
           this.activeFolderContext = f.id;
           this.createThread();
           this.activeFolderContext = null;
         });
-        children.appendChild(empty);
+        inner.appendChild(empty);
       }
       wrap.appendChild(children);
       return wrap;

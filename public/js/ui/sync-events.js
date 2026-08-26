@@ -13,12 +13,21 @@ bindSync() {
       });
       Sync.on('note:upsert', (n) => {
         Store.upsertNote(n);
-        if (this.activeThread === n.threadId) this.appendNoteRealtime(n);
+        if (this.activeThread === n.threadId) this.appendNoteRealtime(n, true);
         this.updateNoteCount();
         // atualiza backlinks se a thread aberta foi mencionada
         if (this.activeThread && n.text && n.text.includes(`(t:${this.activeThread})`)) this.renderBacklinks(this.activeThread);
         const th = Store.getThread(n.threadId);
-        if (this.activeThread !== n.threadId) this.toast(`Nova nota em "${th ? th.name : 'conversa'}"`, { kind: 'success' });
+        if (this.activeThread !== n.threadId) this.toast(`Nova mensagem em "${th ? th.name : 'conversa'}"`, { kind: 'success' });
+      });
+      // A6 delight: nota de OUTRO usuário na thread aberta → slide do topo + tint azulado
+      Sync.on('note:remote', (n) => {
+        if (this.activeThread !== n.threadId) return;
+        const el = document.querySelector(`.bubble[data-client-id="${n.clientId}"]`);
+        if (el && !el.classList.contains('incoming-note')) {
+          el.classList.add('incoming-note');
+          setTimeout(() => el.classList.remove('incoming-note'), 900);
+        }
       });
       Sync.on('note:edit', ({ threadId, clientId, text, edited, editedAt, rev }) => {
         const arr = Store.notesFor(threadId); const n = arr.find((x) => x.clientId === clientId); if (!n) return;

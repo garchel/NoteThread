@@ -9,6 +9,7 @@ const GLYPH_BASE_COLORS = {
   clouds: '#a9bfcf',
   leaves: '#8fb89a',
   circles: '#d9cdb8',
+  dots: '#d9cdb8',
 };
 
 // Desenho de cada glifo — strap true = contorno, fill true = preenchido
@@ -33,6 +34,12 @@ const GLYPHS = {
     { circle: true, cx: 50, cy: 44, r: 12.5, sw: 2.4, stroke: true, fill: false },
     { circle: true, cx: 200, cy: 176, r: 6.5, sw: 2.2, stroke: true, fill: false },
     { circle: true, cx: 263, cy: 63, r: 4.5, fill: true },
+  ],
+  dots: [
+    { dot: true, cx: 60, cy: 55, r: 5, fill: true },
+    { dot: true, cx: 220, cy: 215, r: 3.5, fill: true },
+    { dot: true, cx: 270, cy: 70, r: 2.8, fill: true },
+    { dot: true, cx: 105, cy: 260, r: 4, fill: true },
   ],
 };
 
@@ -84,6 +91,9 @@ function glyphInner(g, scale, jitterX, jitterY, color) {
   } else if (g.circle) {
     const cx = g.cx + jx, cy = g.cy + jy;
     inner = `<circle cx="${cx}" cy="${cy}" r="${g.r * scale}" fill="${fillColor}"${strokeColor ? ` stroke="${strokeColor}" stroke-width="${(g.sw || 2) * scale}"` : ''}/>`;
+  } else if (g.dot) {
+    const cx = g.cx + jx, cy = g.cy + jy;
+    inner = `<circle cx="${cx}" cy="${cy}" r="${g.r * scale}" fill="${color}"/>`;
   } else {
     const cx = (g.cx || 0) + jx, cy = (g.cy || 0) + jy;
     inner = `<g transform="translate(${cx} ${cy}) scale(${scale}) translate(${-(g.cx || 0)} ${-(g.cy || 0)})"><path d="${g.d}" fill="${fillColor}"${strokeColor ? ` stroke="${strokeColor}" stroke-width="${(g.sw || 2) * scale}"` : ''} stroke-linejoin="round"/></g>`;
@@ -104,10 +114,8 @@ export function buildPattern(name, scale) {
   const parts = glyphs.map((g) => {
     const jx = (rng() - 0.5) * 20;
     const jy = (rng() - 0.5) * 20;
-    // se o glifo tem fill:true, usa a cor; se tem stroke, usa a cor; senão usa a base
-    const gColor = g.fill && g.stroke ? color : g.fill ? color : g.stroke ? color : color;
-    // para glifos vazados (fill:false) que são duplicados, o segundo (fill:true) deve ter mesma cor
-    return glyphInner({ ...g, fill: g.fill ? color : 'none', stroke: g.stroke ? color : null }, scale, jx, jy);
+    // g.stroke/g.fill são flags booleanas do desenho; a COR vem sempre do tema
+    return glyphInner(g, scale, jx, jy, color);
   }).join('');
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${PATTERN_TILE}' height='${PATTERN_TILE}'>${parts}</svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g, '%27')}")`;

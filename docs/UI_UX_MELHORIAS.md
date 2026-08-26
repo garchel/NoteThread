@@ -84,8 +84,17 @@
 - [x] Contraste WCAG AA nos 7 temas (commit `0fd7230`)
 - [x] Backdrop mobile + safe-area (modal/sidebar/header/composer)
 - [x] Acessibilidade HIGH: zoom, aria-labels, labels de login (`0fd7230`)
-- [ ] Botões unificados
-- [ ] Touch targets ≥44px
-- [ ] Focus trap no modal
-- [ ] Skeleton/empty-state canvas
-- [ ] Toast safe-area + exit animation
+- [x] Botões unificados (v73 — sistema `.btn` + variantes primary/secondary/ghost/danger; legados como aliases)
+- [x] Touch targets ≥44px (v71 — hit-area `::after`, validado 375×812)
+- [x] Focus trap no modal (v71 — Tab preso, Esc fecha, foco devolvido ao gatilho)
+- [x] Skeleton/empty-state canvas (v73 — skeleton shimmer no load-older + CTA "Nova anotação")
+- [x] Toast safe-area + exit animation (v73)
+
+### Médio prazo — status
+- [x] Densidade adaptativa (v75 — mobile compact ganha padding intermediário via media query).
+- [x] Feedback de erro de sync no composer (v73 — banner inline + botão "Tentar agora").
+- [x] Limpeza das duplicações CSS (`.settings-section/.label`, `.explorer-actions`, `.bubble .meta`, `.msg-toggle`) + eliminação de `transition: all` (9→0, v75).
+- [x] `tabular-nums` em `.meta`, `.count`, `.nav-badge` (v75); `text-wrap: balance` em `.chat-name`.
+- [x] Subsetar fontes Google (v75 — head carrega Jakarta+Baloo 2; Comfortaa/Quicksand/Fredoka/Nunito sob demanda via `loadFontFamily`).
+- [x] Substituir emojis estruturais por SVG (v75 — ⏰/⚠ dos lembretes → `svgClock`/`svgAlert`).
+- [x] Medir Lighthouse PWA/Performance e registrar baseline (`docs/LIGHTHOUSE_BASELINE.md`).

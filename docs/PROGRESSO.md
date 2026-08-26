@@ -1,4 +1,4 @@
-# NoteThread — Progresso (snapshot histórico)
+# SaveChat — Progresso (snapshot histórico)
 
 > **⚠️ Este arquivo é histórico.** O checklist atual de lançamento está em **[ROADMAP_ESTAVEL.md](ROADMAP_ESTAVEL.md)** — use-o como fonte da verdade para web+mobile estável.
 > Atualizado em 24/08/2026 para refletir a arquitetura atual (Vercel + Supabase; backend Node próprio removido).
@@ -28,7 +28,7 @@ App reconstruído localmente via Ctrl+C/V de plataforma que não permitia export
 
 Planejamento completo (loja/TWA, OAuth externo, Capacitor v2, melhorias de produto e motion design) está em **[ROADMAP_ESTAVEL.md](ROADMAP_ESTAVEL.md)**.
 
-Resumo: TWA/PWABuilder pendente; touch targets ≥44px é o único item crítico mobile restante; Lighthouse baseline ainda não medido.
+Resumo: TWA/PWABuilder pendente; touch targets ≥44px ✅ resolvido (v71); Lighthouse baseline registrado (`docs/LIGHTHOUSE_BASELINE.md` — A11y 100, BP 100, Perf 82 local); motion design Fases 1–4 implementado (v74). App renomeado para **SaveChat** (v78).
 
 ## 5. Arquivos importantes
 

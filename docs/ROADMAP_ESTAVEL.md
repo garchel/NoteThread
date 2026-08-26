@@ -1,4 +1,4 @@
-# Roadmap — NoteThread v1 Estável (Web + Mobile)
+# Roadmap — SaveChat v1 Estável (Web + Mobile)
 
 > **Checklist único de lançamento.** Consolida `PROGRESSO.md` + `MOBILE_TASKS.md` e adiciona tasks faltantes para uma versão estável.
 > Última atualização: 24/08/2026 · Fonte técnica: `README.md`, `public/app.js`, `public/js/**`, `vercel.json`, `.github/workflows/ci.yml`, `supabase.sql`
@@ -11,7 +11,65 @@
 
 **Web estável =** host HTTPS único ✅ (Vercel) + BD persistente ✅ (Supabase) + auth real ✅ (Google OAuth via Supabase) + PWA instalável ✅ + Lighthouse PWA ≥90 ⏳ medir + sem `confirm()` nativo ✅ + sem perda de dados ao reiniciar ✅.
 
-**Mobile estável =** touch ≥44px ⏳ (restam 6 controles) + popovers cabem em 375px ✅ + swipe/back funcionam ✅ + APK/TWA instalável com ícones finais ✅ assets prontos.
+**Mobile estável =** touch ≥44px ✅ (v71, hit-area `::after` validada 375×812) + popovers cabem em 375px ✅ + swipe/back funcionam ✅ + APK/TWA instalável com ícones finais ✅ assets prontos + **re-teste em device real** ⏳.
+
+---
+
+## 🚀 PLANO DE LANÇAMENTO (auditoria 24/08/2026)
+
+> Análise dedicada de "o que falta para lançar web+mobile". Os bloqueadores abaixo foram identificados contra o código real. Sem eles, o app funciona como demo mas não como produto público.
+
+### 🔴 Bloqueadores Web
+
+| # | Item | Por quê bloqueia | Esforço | Status |
+|---|------|------------------|---------|--------|
+| LB-W1 | **Domínio de produção indefinido** — nenhuma URL prod no repo; Supabase Auth precisa do domínio em Site URL + Redirect URLs antes do 1º login (`redirect_uri_mismatch`) | Login Google falha em prod | Config no dashboard (~30 min) | [ ] |
+| LB-W2 | **OAuth consent screen em modo Testing** | Fora dos ~100 test users → `Access blocked`. É o limite entre demo e produto | Publicar External; scopes email/profile/openid não exigem verificação extensa (review 3-7 dias se pedirem) | [ ] |
+| LB-W3 | **"Apagar tudo" só limpa local** — `settings.js` zera `Store.data` sem chamar `.delete()` nas tabelas → dados ressincronizam ao recarregar. Risco LGPD: usuário não consegue exercer exclusão | Bug + conformidade legal | ~1h (loop delete em threads/folders/notes) | [x] ✅ `Sync.deleteAllRemote()` apaga notes/threads/folders no Supabase antes do cleanup local (v76) |
+| LB-W4 | **Privacy Policy desatualizada** — menciona `data.json`, Render/Railway e "futuro Postgres"; contato sem domínio próprio. Play reprova política imprecisa | Conformidade legal | ~1h reescrever | [x] ✅ reescritas para ChatSolo + arquitetura Vercel/Supabase/Google, seção LGPD (v76) |
+
+### 🔴 Bloqueadores Mobile (TWA)
+
+| # | Item | Por quê bloqueia | Esforço | Status |
+|---|------|------------------|---------|--------|
+| LB-M1 | **Touch targets <44px** (6 controles: `.btn-icon-sm` 32, `.toggle-pass` 32, `.sync-status` 24, `.np-close` 26, `.attach-rm` 20, override `.cozy-composer-bar .fmt-btn` 34) | Revisão de acessibilidade da Play | ~2h via pseudo-elemento (= M3.4) | [x] ✅ hit-area 44px via `::after` (v71) |
+| LB-M2 | **Manifest sem `screenshots`/rich info** | PWABuilder usa para score máximo e gera assets da loja | ~1h + capturas | [x] ✅ 2 screenshots + lang/categories (v72) |
+| LB-M3 | **Re-teste device real nunca feito** (só Playwright desde 21/08) | Docs exigem validação física antes da loja | Meio dia | [ ] |
+
+### 🟡 Importantes (lançar sem = dor operacional)
+
+| # | Item | Impacto |
+|---|------|---------|
+| IMP-1 | **Import de backup ausente** (export JSON existe, import não) — usuário perde dados sem recovery path | Suporte/churn | ✅ Import em Configurações→Dados: merge por id, validação de shape, toasts de erro/sucesso (v72) |
+| IMP-2 | **Sem baseline Lighthouse** — W2.6 pede PWA ≥90, nunca medido em prod. Medir ANTES de submeter à loja | Risco de reprovação | ✅ baseline registrado em `docs/LIGHTHOUSE_BASELINE.md` (A11y 100, BP 100, Perf 82 local) |
+| IMP-3 | **Versionamento dessincronizado** — package.json `1.0.0` vs CHANGELOG `[1.2.0]`, zero git tags | Higiene de release | ✅ package.json 1.3.0 + CHANGELOG [1.3.0] + tag `v1.3.0` |
+| IMP-4 | **Focus trap ausente no modal** — Tab escapa pro fundo; teclado-only trava | Acessibilidade | ✅ trap + Esc + foco devolvido ao gatilho (v71) |
+| IMP-5 | **Sem observabilidade** — `/health` morreu com o server; zero error tracking. Crash silencioso = usuários perdidos sem saber | Operação | ✅ `js/error-tracking.js`: window.onerror + unhandledrejection em buffer local; `window.ERROR_ENDPOINT` opcional para destino externo (v72) |
+| LB-M2 | **Manifest sem `screenshots`/rich info** | PWABuilder usa para score máximo e gera assets da loja | ✅ 2 screenshots narrow + lang/categories (v72) |
+
+### Cronograma sugerido
+
+```
+Semana 1 (bloqueadores — W1/W2 rodam em paralelo pela espera do Google):
+  ☐ W1+W2  domínio + OAuth External
+  ☐ W3     fix "Apagar tudo" remoto (+ LGPD)
+  ☐ W4     reescrever Privacy/Terms
+  ☐ M1     touch targets (= M3.4)
+  ☐ I3     tag v1.2.0 + sync package.json
+
+Semana 2 (validação):
+  ☐ M3     device real Android (pequeno + grande)
+  ☐ I2     Lighthouse baseline ≥90
+  ☐ M2     screenshots manifest + TWA no PWABuilder
+  ☐ I5     Sentry free tier (~meio dia)
+
+Loja:
+  ☐ Assets (screenshots phone/tablet, feature graphic 1024×500)
+  ☐ Beta track interno (20 testers) → 0 crash em 3 dias
+  ☐ Produção
+```
+
+> **Veredito da auditoria:** tecnicamente maduro — o que falta é configuração de conta/domínio, conformidade legal e validação física, não features.
 
 ---
 
@@ -19,7 +77,7 @@
 
 | # | Task | Status |
 |---|------|--------|
-| W0.1 | Git: commit + push | ✅ `main → github.com/garchel/NoteThread` |
+| W0.1 | Git: commit + push | ✅ `main → github.com/garchel/SaveChat` |
 | W0.2 | Host único HTTPS | ✅ Vercel (estático; o plano original Render+WS foi substituído pelo Supabase Realtime) |
 | W0.3 | Config sync prod | ✅ Supabase direto (`window.SUPABASE_URL` no `index.html`, anon key pública + RLS) |
 | W0.4 | Domínio + HTTPS | ✅ HTTPS automático Vercel |
@@ -58,7 +116,7 @@ Long-press bolha ✅ · long-press tnode/pasta ✅ · navegação sidebar↔chat
 
 | # | Task | Aceite | Status |
 |---|------|--------|--------|
-| M3.4 | Touch targets ≥44px | WCAG | 🔴 Pendente — 6 controles pequenos: `.btn-icon-sm` 32px, `.toggle-pass` 32px, `.sync-status` 24px, `.np-close` 26px, `.attach-rm` 20px, e override `.cozy-composer-bar .fmt-btn` 34px sobre o base 44px |
+| M3.4 | Touch targets ≥44px | WCAG | ✅ hit-area 44×44 via `::after` nos 6 controles (v71); validado Playwright 375×812 — 16/16 checks |
 | M3.5 | Popovers responsivos | caber em 375px | ✅ `min(Xpx, calc(100vw - 16px))` em todos |
 | M3.6 | Teclado cobre composer | textarea visível | ✅ scrollIntoView + visualViewport |
 | M3.7 | Haptic | vibra Android | ✅ |
@@ -123,18 +181,20 @@ Long-press bolha ✅ · long-press tnode/pasta ✅ · navegação sidebar↔chat
 | # | Task | Detalhe | Status |
 |---|------|---------|--------|
 | Q6.10 | ✅ Acessibilidade HIGH | Contraste ≥4.5:1 nos 7 temas, zoom habilitado, aria-labels icon-only, labels login — commit `0fd7230` | ✅ |
-| Q6.11 | ⏳ Motion design | Identidade de movimento + 9 fixes + 9 oportunidades — ver `docs/MOTION_DESIGN.md` | planejado |
-| Q6.12 | ⏳ UI polish restante | Botões unificados, touch targets, focus trap, skeleton — ver `docs/UI_UX_MELHORIAS.md` | planejado |
+| Q6.11 | ✅ Motion design | Identidade "playful contido" implementada (Fases 1–4, v73/v74) — ver `docs/MOTION_DESIGN.md` | ✅ |
+| Q6.12 | ✅ UI polish restante | Botões unificados (`.btn` v73), touch targets ≥44px (v71), focus trap (v71), skeleton + CTA empty state (v73) | ✅ |
 
 ---
 
 ## Ordem recomendada (atualizada)
 
+> **Substituído pelo PLANO DE LANÇAMENTO acima** (24/08) — que detalha bloqueadores, importantes e cronograma. Resumo da ordem antiga, ainda válida como fundamento:
+
 1. ~~Fase 0~~ / ~~Fase 1~~ — ✅ feitas pela pilha Vercel+Supabase.
-2. **M3.4 touch targets** (único item crítico mobile restante) + focus trap no modal.
-3. Re-teste device real 375×812 (checklist `MOBILE_TASKS.md`).
-4. Medir **Lighthouse PWA + Performance** (W2.6) — único gate sem evidência.
-5. Fase 4 loja (TWA).
+2. Bloqueadores LB-W1..W4 + LB-M1 (touch targets = M3.4).
+3. Importantes IMP-1..5 em paralelo.
+4. Re-teste device real + Lighthouse baseline.
+5. Fase 4 loja (TWA) → Beta track.
 6. Fase 5 v2 externo quando for publicar fora dos test users.
 7. Fase 6 melhorias (Q6.11/Q6.12) em paralelo.
 

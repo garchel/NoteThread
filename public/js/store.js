@@ -19,7 +19,7 @@
         send: 'scan', pin: 'bloom', favorite: 'sparkle', delete: 'pulse', create: 'bloom', error: 'error', open: 'tick'
       } };
       d.ui.sounds = d.ui.sounds || defaultSounds;
-      d.ui.theme = d.ui.theme || 'lavender';
+      d.ui.theme = d.ui.theme || 'peach';
       // migração: limpa flag "pending" de notas antigas (dados de versões anteriores)
       let migrated = false;
       Object.values(d.notes).forEach((arr) => arr.forEach((n) => { if (n.pending) { n.pending = false; migrated = true; } }));

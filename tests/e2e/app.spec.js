@@ -87,6 +87,11 @@ test('menção @ insere token e renderiza chip clicável', async ({ page }) => {
   // chip renderizado na bolha
   const chip = page.locator('.bubble .mention', { hasText: 'Alvo' }).last();
   await expect(chip).toBeVisible();
+
+  // 1 clique = preview popover; botão "Abrir nota" = abre a thread
   await chip.click();
+  await expect(page.locator('#note-preview')).toBeVisible();
+  await expect(page.locator('#np-thread')).toHaveText('Alvo');
+  await page.click('#np-open');
   await expect(page.locator('#chat-name')).toHaveText('Alvo');
 });

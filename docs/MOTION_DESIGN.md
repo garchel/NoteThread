@@ -65,10 +65,10 @@ Interação de alta frequência = atenção proibida (custo se repete a cada dis
 
 | Fase | Escopo | Esforço | Status |
 |---|---|---|---|
-| **Fase 1 — Identidade** | Vars `--ease-*`/`--dur-*`; padronizar press scale (.96); corrigir M1, M3, M5 | Médio | [ ] |
-| **Fase 2 — Saídas** | Sistema `.leaving` p/ popover/modal/toast/ctx-menu (M2, M9) | Médio | [ ] |
-| **Fase 3 — Delight** | A1 checkbox tick, A3 pin badge pop, A6 incoming-note tint | Pequeno | [ ] |
-| **Fase 4 — Ambient** | A4 sync breathing, A5 planta flutuante (ambos mortos no reduced-motion) | Pequeno | [ ] |
+| **Fase 1 — Identidade** | Vars `--ease-*`/`--dur-*`; padronizar press scale (.96); corrigir M1, M3, M5 | Médio | [x] ✅ v74 |
+| **Fase 2 — Saídas** | Sistema `.leaving` p/ popover/modal/toast/ctx-menu (M2, M9) | Médio | [x] ✅ v73/v74 (`hideWithExit`) |
+| **Fase 3 — Delight** | A1 checkbox tick, A3 pin badge pop, A6 incoming-note tint | Pequeno | [x] ✅ v74 (A6 via `note:remote`) |
+| **Fase 4 — Ambient** | A4 sync breathing, A5 planta flutuante (ambos mortos no reduced-motion) | Pequeno | [x] ✅ v74 |
 | Backlog | M6/M9 stagger+origem, M7 transform-origin dinâmico, M8 view transitions, A7 dnd lift | — | [ ] |
 
 ## Checklist por animação nova (da skill)

@@ -1,4 +1,4 @@
-# Auditoria Mobile — NoteThread (detalhe técnico)
+# Auditoria Mobile — SaveChat (detalhe técnico)
 
 > **Companion do roadmap.** O checklist priorizado está em **[ROADMAP_ESTAVEL.md](ROADMAP_ESTAVEL.md) Fase 3**. Este arquivo mantém a evidência viewport `375×812` (iPhone X via Playwright).
 > Re-auditado em 24/08/2026 contra `styles.css`, `js/ui/*.js` e `index.html` atuais.
@@ -32,8 +32,8 @@
 
 | # | Problema | Evidência atual | Roadmap |
 |---|----------|-----------------|---------|
-| 1 | Touch targets <44px: `.btn-icon-sm` 32px (lembretes/notificações), `.toggle-pass` 32px, `.sync-status` 24px, `.np-close` 26px, `.attach-rm` 20px, `.cozy-composer-bar .fmt-btn` 34px (override do base 44px!) | `styles.css` | M3.4 — estender hit area via pseudo-elemento sem mudar o visual |
-| 2 | Modal sem focus trap nem retorno de foco | `js/ui/navigation.js` não trata Tab dentro do modal | W1.x a11y |
+| 1 | Touch targets <44px: `.btn-icon-sm` 32px (lembretes/notificações), `.toggle-pass` 32px, `.sync-status` 24px, `.np-close` 26px, `.attach-rm` 20px, `.cozy-composer-bar .fmt-btn` 34px (override do base 44px!) | `styles.css` | M3.4 — ✅ RESOLVIDO (v71): hit-area 44×44 via `::after` sem mudar o visual |
+| 2 | Modal sem focus trap nem retorno de foco | `js/ui/navigation.js` não trata Tab dentro do modal | W1.x a11y — ✅ RESOLVIDO (v71): trap + Esc + foco devolvido |
 
 ### 🟡 MÉDIO
 

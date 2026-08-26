@@ -6,7 +6,7 @@
     bubble: SVG('<path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 9 9 0 0 1-4-1L3 20l1.5-5.5a8.5 8.5 0 1 1 16.5-3z"/>'),
     chevron: SVG('<polyline points="6 9 12 15 18 9"/>'),
     star: SVG('<polygon points="12 2 15 9 22 9.3 17 14 18.5 21 12 17 5.5 21 7 14 2 9.3 9 9"/>'),
-    pin: '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor" stroke="none"><path d="M12 2 C9.5 2 8 4 8 6.5 c0 1.6 .7 2.7 1.6 3.6 L6 17.5 a1 1 0 0 0 .9 1.5 h10.2 a1 1 0 0 0 .9-1.5 L14.4 10.1 c.9-.9 1.6-2 1.6-3.6 C16 4 14.5 2 12 2 z"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6"/><path d="M10 4v5.5L7.2 13a1 1 0 0 0 .9 1.5h7.8a1 1 0 0 0 .9-1.5L14 9.5V4"/><path d="M12 14.5V21"/></svg>',
     pencil: SVG('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
     trash: SVG('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'),
     arrowDownRight: SVG('<line x1="7" y1="7" x2="17" y2="17"/><polyline points="17 7 17 17 7 17"/>'),

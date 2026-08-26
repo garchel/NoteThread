@@ -1,4 +1,4 @@
-# Design Tokens — NoteThread
+# Design Tokens — SaveChat
 
 > Tokens extraídos de `public/styles.css:1`. Use como fonte da verdade para Figma e código.
 > Atualizado em 24/08/2026 — reflete o tema padrão **cozy** do `:root` (o doc antigo mostrava valores lavender que hoje são só uma variação).

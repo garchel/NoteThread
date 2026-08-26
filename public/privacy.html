@@ -1,12 +1,42 @@
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacidade — NoteThread</title><link rel="stylesheet" href="styles.css"></head><body style="max-width:720px;margin:40px auto;padding:20px;font-family:system-ui">
-<h1>Política de Privacidade — NoteThread</h1>
-<p>Última atualização: 21/08/2026</p>
-<p>NoteThread armazena suas notas localmente (<code>localStorage</code>) e, quando conectado, sincroniza via Supabase (Postgres + Realtime). Dados são isolados por conta (<code>auth.uid()</code> via RLS).</p>
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacidade — SaveChat</title><link rel="stylesheet" href="styles.css"></head><body style="max-width:720px;margin:40px auto;padding:20px;font-family:system-ui">
+<h1>Política de Privacidade — SaveChat</h1>
+<p>Última atualização: 25/08/2026</p>
+
+<p>O SaveChat é um aplicativo de notas em formato de conversas, <strong>offline-first</strong>: suas anotações ficam salvas primeiro no seu dispositivo e são sincronizadas com a nuvem apenas quando você entra com sua conta.</p>
+
+<h2>1. Quais dados coletamos</h2>
 <ul>
-<li><strong>Dados coletados:</strong> e-mail (login), conteúdo de notas/threads/pastas.</li>
-<li><strong>Retenção:</strong> local + servidor (atualmente <code>data.json</code>, futuro Postgres). Exclusão via “Apagar tudo” nas configurações.</li>
-<li><strong>Compartilhamento:</strong> nenhum terceiro, exceto provedor de hospedagem (Render/Railway) e futuro provedor OAuth Google.</li>
+<li><strong>Dados da conta:</strong> nome e e-mail do Google, exclusivamente para identificar seu usuário (login via Google OAuth).</li>
+<li><strong>Conteúdo que você cria:</strong> textos das notas/conversas/cadernos, tags, imagens que você anexa, lembretes e preferências (tema, fonte, densidade).</li>
+<li><strong>Dados técnicos mínimos:</strong> identificadores de sessão necessários para manter você conectado e sincronizar seus dispositivos.</li>
 </ul>
-<p>Contato: <a href="mailto:contato@notethread.app">contato@notethread.app</a></p>
+<p>Não coletamos dados de navegação para publicidade, não vendemos dados e não usamos rastreadores de terceiros para perfilamento.</p>
+
+<h2>2. Onde os dados ficam</h2>
+<ul>
+<li><strong>No seu dispositivo:</strong> cópia local em <code>localStorage</code> — o app funciona mesmo sem internet (offline-first).</li>
+<li><strong>Na nuvem (quando logado):</strong> Supabase — Postgres com Row Level Security (<code>auth.uid()</code>): cada usuário só acessa os próprios dados. Imagens anexadas ficam no Supabase Storage (bucket privado). Sincronização em tempo real via Supabase Realtime.</li>
+<li><strong>Hospedagem do app:</strong> Vercel (arquivos estáticos do aplicativo; não armazenamos conteúdo lá).</li>
+</ul>
+
+<h2>3. Retenção e exclusão dos dados</h2>
+<ul>
+<li>Seus dados permanecem armazenados enquanto sua conta existir e você não solicitar exclusão.</li>
+<li><strong>Exclusão completa e imediata:</strong> em Configurações → "Apagar tudo". Isso remove todas as conversas, cadernos e notas tanto do seu dispositivo quanto do Supabase (Postgres e Storage), em atendimento ao direito de eliminação (LGPD art. 18, VI).</li>
+<li>Você também pode exportar um backup JSON antes de apagar, em Configurações → "Exportar notas".</li>
+</ul>
+
+<h2>4. Compartilhamento com terceiros</h2>
+<p>Nenhum dado é compartilhado ou vendido. Os provedores que processam dados estritamente para o funcionamento do serviço são: Google (autenticação OAuth), Supabase (banco de dados, storage e tempo real) e Vercel (hospedagem do app).</p>
+
+<h2>5. Seus direitos (LGPD)</h2>
+<p>Você pode solicitar a qualquer momento: confirmação de tratamento, acesso aos dados, correção, anonimização/eliminação, portabilidade (via exportação JSON) e revogação do consentimento (apagando a conta/dados). Basta contatar-nos pelo e-mail abaixo.</p>
+
+<h2>6. Crianças</h2>
+<p>O SaveChat não é direcionado a menores de 13 anos e não coletamos intencionalmente dados deles.</p>
+
+<h2>7. Contato</h2>
+<p>Dúvidas sobre esta política ou sobre o tratamento dos seus dados: <a href="mailto:suporte@chatsolo.app">suporte@chatsolo.app</a></p>
+
 <p><a href="./">← Voltar ao app</a></p>
 </body></html>

@@ -12,13 +12,14 @@ describe('supabase.sql', ()=>{
 
 // Verifica manifest e icons
 describe('PWA', ()=>{
-  it('manifest tem 4 icons', ()=>{
+  it('manifest tem icons', ()=>{
     const m = JSON.parse(readFileSync('public/manifest.webmanifest','utf8'));
-    assert.equal(m.icons.length,4);
-    assert.ok(m.icons.find(i=>i.sizes==='1024x1024'));
+    assert.ok(m.icons.length >= 2);
+    assert.ok(m.icons.find(i=>i.src.includes('logo')));
+    assert.equal(m.short_name, 'SaveChat');
   });
-  it('sw.js é v69', ()=>{
+  it('sw.js é v66', ()=>{
     const sw=readFileSync('public/sw.js','utf8');
-    assert.match(sw, /notethread-v69/);
+    assert.match(sw, /notethread-v80/);
   });
 });

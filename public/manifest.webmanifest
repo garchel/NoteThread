@@ -1,16 +1,35 @@
 {
-  "name": "NoteThread — Notas em threads",
-  "short_name": "NoteThread",
+  "name": "SaveChat — Notas em threads",
+  "short_name": "SaveChat",
   "description": "Bloco de notas em formato de chat/threads infinitas com sync em tempo real e offline-first.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f1fb",
-  "theme_color": "#7c5cff",
+  "theme_color": "#ff7f50",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/logo.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "screenshots": [
+    {
+      "src": "store-screenshots/phone-main.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Explorer com cadernos e busca por filtros"
+    },
+    {
+      "src": "store-screenshots/phone-chat.png",
+      "sizes": "824x1830",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Notas como mensagens em chat, com checklists"
+    }
   ]
 }

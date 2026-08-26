@@ -1,6 +1,11 @@
 import { now, haptic, $, esc } from '../utils.js';
 import { Store } from '../store.js';
 import { Sync } from '../sync-supabase.js';
+import { ICON, wrapSvg } from '../icons.js';
+
+// SVG inline para substituir emojis estruturais (⏰/⚠) na UI
+const svgClock = (s = 12) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px">${ICON.clock}</svg>`;
+const svgAlert = (s = 12) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
 
 export const ReminderMethods = {
 showReminderModal(clientId) {
@@ -101,7 +106,7 @@ showReminderModal(clientId) {
           n.remindFired = true; Store.save();
           Sync.send('note:remind', { clientId: n.clientId, remindAt: n.remindAt, remindFired: true });
           const th = Store.getThread(tid);
-          const title = `⏰ ${th ? th.name : 'NoteThread'}`;
+          const title = `⏰ ${th ? th.name : 'SaveChat'}`;
           const body = (n.text || '').slice(0, 120) || 'Lembrete';
           fired++;
           // notifica (SW no mobile/PWA; Notification API no desktop) e sempre mostra toast in-app
@@ -144,6 +149,42 @@ showReminderModal(clientId) {
       const count = this.pendingReminders().length;
       if (count > 0) { badge.textContent = count > 9 ? '9+' : String(count); badge.classList.remove('hidden'); }
       else badge.classList.add('hidden');
+      this.updateFaviconBadge(count);
+    },
+
+    // Favicon dinâmico: bolinha coral com contagem de lembretes pendentes na aba
+    updateFaviconBadge(count) {
+      try {
+        const size = 64, r = 22;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, size, size);
+          if (count > 0) {
+            // círculo vermelho no canto superior direito
+            ctx.beginPath();
+            ctx.arc(size - r - 2, r + 2, r, 0, Math.PI * 2);
+            ctx.fillStyle = '#e5484d';
+            ctx.fill();
+            ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+            const label = count > 9 ? '9+' : String(count);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold ' + (label.length > 1 ? 20 : 24) + 'px system-ui, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(label, size - r - 2, r + 4);
+          }
+          let link = document.querySelector('link[rel="icon"][type="image/png"]');
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon'; link.type = 'image/png';
+            document.head.appendChild(link);
+          }
+          link.href = canvas.toDataURL('image/png');
+        };
+        img.src = 'favicon-32.png';
+      } catch { /* favicon dinâmico é cosmético — nunca quebrar o app */ }
     },
 
     toggleRemindersPopover() {
@@ -179,7 +220,7 @@ showReminderModal(clientId) {
         const snippet = esc((note.text || '').replace(/^(\s*)\[( |x)\]\s*/gm, '').slice(0, 60)) || 'Lembrete';
         const overdue = note.remindAt < Date.now();
         return `<button type="button" class="rem-item" data-tid="${threadId}" data-cid="${note.clientId}">
-                  <span class="rem-when${overdue ? ' overdue' : ''}">${overdue ? '⚠' : '⏰'} ${when}</span>
+                  <span class="rem-when${overdue ? ' overdue' : ''}">${overdue ? svgAlert() : svgClock()} ${when}</span>
                   <span class="rem-snippet">${snippet}</span>
                   <span class="rem-thread">${esc(th ? th.name : '')}</span>
                 </button>`;
@@ -234,7 +275,7 @@ showReminderModal(clientId) {
         const snippet = esc((note.text || '').replace(/^(\s*)\[( |x)\]\s*/gm, '').slice(0, 60)) || 'Lembrete';
         const fired = note.remindFired;
         return `<button type="button" class="rem-item" data-tid="${threadId}" data-cid="${note.clientId}">
-                  <span class="rem-when${fired ? '' : ' overdue'}">${fired ? '✓' : '⏰'} ${when} ${fired ? '· disparado' : '· pendente'}</span>
+                  <span class="rem-when${fired ? '' : ' overdue'}">${fired ? svgAlert() : svgClock()} ${when} ${fired ? '· disparado' : '· pendente'}</span>
                   <span class="rem-snippet">${snippet}</span>
                   <span class="rem-thread">${esc(th ? th.name : '')}</span>
                 </button>`;

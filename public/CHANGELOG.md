@@ -2,6 +2,21 @@
 
 Todas as mudanças notáveis serão documentadas aqui (semver).
 
+## [1.4.0] — 2026-09-01
+### Adicionado
+- Rebrand final para SaveChat: logo própria em toda a UI, favicon com badge de lembretes, ícones PWA dedicados (any + maskable)
+- Geração de assets de loja: screenshots 824×1830 no manifest, feature graphic 1024×500, textos da Play em docs/STORE_LISTING.md
+- Movido para public/: este changelog agora é servido pelo site — o toast "Nova versão" lê o que mudou de verdade (antes 404 em prod)
+- Terminologia oficial na UI (docs/GLOSSARIO.md): Conversa, Mensagem, Caderno
+- Menu do título da conversa com backlinks "Mencionado em"
+- Motion fino: transform-origin dinâmico nos popovers, crossfade na troca de tema (View Transitions), lift no drag & drop da árvore
+- Emojis com carregamento sob demanda; pipeline de build minificado (dist/) para preview de prod
+- Hardening do banco: EXECUTE público revogado no event trigger de auto-RLS (advisors de segurança do Supabase)
+
+### Corrigido
+- E-mail de contato legal (privacidade/termos) apontava para domínio da marca antiga
+- Versão sincronizada: package.json, tela Sobre, Sentry release e tag git
+
 ## [1.3.0] — 2026-08-24
 ### Adicionado
 - Rebrand para ChatSolo: logo própria (login, explorer, favicon, manifest PWA)

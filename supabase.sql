@@ -103,3 +103,7 @@ do $$ begin
   create policy "public read images" on storage.objects for select
     using (bucket_id = 'note-images');
 exception when duplicate_object then null; end $$;
+
+-- 6. Hardening (v1.4.0): o event trigger de auto-RLS não precisa ser
+-- executável via PostgREST/RPC — revoga acesso público (advisors Supabase).
+revoke execute on function public.rls_auto_enable() from anon, authenticated, public;

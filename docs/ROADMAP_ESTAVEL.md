@@ -42,9 +42,11 @@
 |---|------|---------|
 | IMP-1 | **Import de backup ausente** (export JSON existe, import não) — usuário perde dados sem recovery path | Suporte/churn | ✅ Import em Configurações→Dados: merge por id, validação de shape, toasts de erro/sucesso (v72) |
 | IMP-2 | **Sem baseline Lighthouse** — W2.6 pede PWA ≥90, nunca medido em prod. Medir ANTES de submeter à loja | Risco de reprovação | ✅ baseline registrado em `docs/LIGHTHOUSE_BASELINE.md` (A11y 100, BP 100, Perf 82 local) |
-| IMP-3 | **Versionamento dessincronizado** — package.json `1.0.0` vs CHANGELOG `[1.2.0]`, zero git tags | Higiene de release | ✅ package.json 1.3.0 + CHANGELOG [1.3.0] + tag `v1.3.0` |
+| IMP-3 | **Versionamento dessincronizado** — package.json `1.0.0` vs CHANGELOG `[1.2.0]`, zero git tags | Higiene de release | ✅ sincronizado a cada release — v1.4.0 (01/09/2026) |
 | IMP-4 | **Focus trap ausente no modal** — Tab escapa pro fundo; teclado-only trava | Acessibilidade | ✅ trap + Esc + foco devolvido ao gatilho (v71) |
-| IMP-5 | **Sem observabilidade** — `/health` morreu com o server; zero error tracking. Crash silencioso = usuários perdidos sem saber | Operação | ✅ `js/error-tracking.js`: window.onerror + unhandledrejection em buffer local; `window.ERROR_ENDPOINT` opcional para destino externo (v72) |
+| IMP-5 | **Sem observabilidade** — `/health` morreu com o server; zero error tracking. Crash silencioso = usuários perdidos sem saber | Operação | ✅ `js/error-tracking.js` + loader Sentry em index.html (inert até preencher `SENTRY_DSN`) — **resta criar conta free e colar o DSN** |
+| IMP-6 | CHANGELOG não era servido pelo site — toast "what's new" dava 404 em prod (Vercel serve só `public/`) | Funcionalidade quebrada | ✅ movido para `public/CHANGELOG.md` + precache no SW (v1.4.0) |
+| IMP-7 | Função `rls_auto_enable()` executável por `anon`/`authenticated` via RPC (advisors Supabase) | Segurança | ✅ `revoke execute ... from anon, authenticated, public` aplicado no banco prod + `supabase.sql` (v1.4.0) — advisors limpos |
 | LB-M2 | **Manifest sem `screenshots`/rich info** | PWABuilder usa para score máximo e gera assets da loja | ✅ 2 screenshots narrow + lang/categories (v72) |
 
 ### Cronograma sugerido

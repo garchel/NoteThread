@@ -24,6 +24,7 @@ npm run dev        # servidor local (:3001)
 npm run check      # node --check em todo JS público
 npm run test       # node:test unit (8 specs, inclui versão do SW)
 npm run e2e        # Playwright: fluxo crítico + menções
+npm run build      # minifica para dist/ (preview de prod)
 ```
 
 ## Documentação

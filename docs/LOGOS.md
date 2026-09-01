@@ -1,7 +1,7 @@
 # Logos — Guia de Uso
 
 > Onde usar cada arquivo de logo do SaveChat. Gerados em 24/08/2026 a partir de `assets/logo.svg` (fonte vetorial original).
-> ⚠️ O app foi renomeado para **ChatSolo** — se o nome definitivo for esse, os PNGs com wordmark (`feature-graphic`) precisam ser regenerados com o novo nome.
+> App renomeado para **SaveChat** (v78) — wordmarks e screenshots da loja regerados 25/08/2026 com o nome final.
 
 ## Estrutura de pastas
 

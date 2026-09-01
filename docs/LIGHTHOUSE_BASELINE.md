@@ -1,4 +1,4 @@
-# Lighthouse Baseline — ChatSolo
+# Lighthouse Baseline — SaveChat
 
 > Primeira medição registrada: 24/08/2026 (IMP-2 / W2.6).
 > Ambiente local (`npm run dev`), Edge headless, viewport default, categoria PWA medida separadamente (Lighthouse 13 removeu a categoria PWA — checks de instalabilidade validados via manifest/SW).

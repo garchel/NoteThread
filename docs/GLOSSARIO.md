@@ -1,4 +1,4 @@
-# Glossário — Terminologia Oficial do ChatSolo
+# Glossário — Terminologia Oficial do SaveChat
 
 > Norma para toda a UI, documentação e comunicação. Última atualização: 25/08/2026.
 > Princípio: **verbos e micro-ações em linguagem de chat; substantivos globais em linguagem de notas.**

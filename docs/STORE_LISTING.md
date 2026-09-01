@@ -71,4 +71,4 @@ Baixe agora e transforme aquele monte de ideias soltas em conversas organizadas.
 | Screenshot phone 1 | `docs/store-screenshots/phone-main.png` | ✅ |
 | Screenshot phone 2 | `docs/store-screenshots/phone-chat.png` | ✅ |
 
-⚠️ Screenshots atuais mostram tema pêssego antigo — regenerar após deploy para incluir o rebrand visual atual (logo SaveChat já aparece).
+✅ Screenshots regeradas em 25/08/2026, pós-rebrand (logo SaveChat visível). Só regererar se o tema default mudar antes do envio à loja.

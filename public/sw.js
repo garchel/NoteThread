@@ -1,12 +1,12 @@
 // NoteThread Service Worker — app shell offline + cache-first para assets.
 // Bump CACHE (vN) a cada deploy para invalidar versões anteriores.
-const CACHE = 'notethread-v82';
+const CACHE = 'notethread-v83';
 const ASSETS = [
   './', './index.html', './app.js', './styles.css', './CHANGELOG.md',
   './assets/logo.svg', './assets/logo.png',
   './js/utils.js', './js/icons.js', './js/emojis.js', './js/emojis-data.js', './js/markdown.js',
   './js/store.js', './js/sound.js', './js/sync-supabase.js', './js/offline-queue.js',
-  './js/bg-patterns.js', './js/friendly-names.js', './js/error-tracking.js',
+  './js/bg-patterns.js', './js/friendly-names.js', './js/error-tracking.js', './js/updater.js',
   './js/ui/picker.js', './js/ui/navigation.js', './js/ui/messages.js',
   './js/ui/mentions.js', './js/ui/reminders.js',
   './js/ui/settings.js', './js/ui/auth.js', './js/ui/tree.js',
@@ -16,7 +16,14 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // Regra: NÃO faz skipWaiting aqui. A nova versão fica "waiting" até o usuário
+  // clicar em Atualizar app (postMessage SKIP_WAITING) — atualização controlada.
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+});
+
+// o cliente pediu explicitamente assumir a nova versão (botão Atualizar app)
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
@@ -68,8 +75,9 @@ self.addEventListener('fetch', (e) => {
   // supabase/esm.sh: idem — não responder via SW
   if (url.hostname.endsWith('.supabase.co') || url.hostname === 'esm.sh') return;
 
-  // CSS/JS: network-first — pega sempre a versão mais nova; cache só como fallback offline
-  const isAsset = url.origin === location.origin && /\.(css|js|mjs)$/.test(url.pathname);
+  // CSS/JS/CHANGELOG e navegação: network-first — sempre a versão mais nova;
+  // cache só como fallback offline
+  const isAsset = url.origin === location.origin && /\.(css|js|mjs|md)$/.test(url.pathname);
   if (isAsset) {
     e.respondWith(
       fetch(req).then((res) => {
@@ -79,6 +87,21 @@ self.addEventListener('fetch', (e) => {
         }
         return res;
       }).catch(() => caches.match(req).then((cached) => cached || new Response('', { status: 504, statusText: 'offline' })))
+    );
+    return;
+  }
+
+  // navegação (index.html): network-first para a versão embarcada (APP_VERSION)
+  // sempre refletir o deploy mais novo; cache = fallback offline
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      }).catch(() => caches.match(req).then((cached) => cached || caches.match('./index.html')))
     );
     return;
   }

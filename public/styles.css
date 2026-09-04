@@ -364,6 +364,39 @@ body::before {
 .profile-btn:hover { background: var(--bg); }
 .profile-popover { min-width: 200px; }
 
+/* ---- Botão Atualizar app + chip de status (menu do perfil) ---- */
+#profile-update { position: relative; }
+.update-chip {
+  margin-left: auto;
+  font-size: 11px; font-weight: 700; letter-spacing: .2px;
+  padding: 2px 7px; border-radius: 999px;
+  background: var(--bg); color: var(--text-dim);
+  border: 1px solid var(--border);
+  max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.update-chip[data-state="current"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+.update-chip[data-state="update"] {
+  color: #7c4a03; background: rgba(245, 166, 35, .18);
+  border-color: rgba(245, 166, 35, .5);
+}
+.update-chip[data-state="checking"] { color: var(--accent); border-color: var(--accent-soft); }
+/* dot âmbar no avatar: sinal de novidade com o popover fechado */
+#me-avatar.has-update, #me-avatar-img.has-update { position: relative; }
+#me-avatar.has-update::after, #me-avatar-img.has-update::after {
+  content: ""; position: absolute; top: -2px; right: -2px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #f5a623; border: 2px solid var(--bg-elev);
+}
+/* tema escuro: texto âmbar mais claro p/ contraste */
+[data-theme="dark"] .update-chip[data-state="update"],
+[data-theme="midnight"] .update-chip[data-state="update"] {
+  color: #ffd08a; background: rgba(245, 166, 35, .16); border-color: rgba(245, 166, 35, .4);
+}
+/* estado instalando: ícone do botão gira */
+#profile-update.updating svg { animation: updSpin .8s linear infinite; }
+#profile-update.updating { opacity: .75; }
+@keyframes updSpin { to { transform: rotate(360deg); } }
+
 /* ===================== AUTH ===================== */
 /* Tela de login — 100% baseada em tokens do tema (mesmo cozy do app) */
 .auth-screen {

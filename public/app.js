@@ -5,6 +5,7 @@ import { renderMarkdown } from './js/markdown.js';
 import { Store } from './js/store.js';
 import { CUELUME_SOUNDS, Sound } from './js/sound.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_SUPABASE, getSupa, Sync } from './js/sync-supabase.js';
+import { Updater } from './js/updater.js';
 import { PickerMethods } from './js/ui/picker.js';
 import { NavigationMethods } from './js/ui/navigation.js';
 import { MessagesMethods } from './js/ui/messages.js';
@@ -91,6 +92,22 @@ async init() {
           // pequeno delay para não ser fechado pelo handler global do settings popover
           setTimeout(() => this.toggleSettingsPopover(), 10);
         });
+        // Atualizar app: clique = instalar a versão nova (SW waiting assume + reload)
+        document.getElementById('profile-update')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const done = (lc) => {
+            if (lc && lc.state === 'update') Updater.applyUpdate();
+            else if (lc && lc.state === 'current') this.toast('Você já está na versão mais recente', { kind: 'success', duration: 3000 });
+          };
+          const lc = Updater.lastCheck;
+          if (!lc || ['offline', 'error', 'checking'].includes(lc.state)) {
+            // estado velho/sem resposta: verifica de novo antes de decidir
+            Updater.check().then(() => done(Updater.lastCheck));
+            return;
+          }
+          if (lc.state === 'update') Updater.applyUpdate();
+          else Updater.check().then(() => done(Updater.lastCheck)); // revalida e avisa
+        });
         document.getElementById('profile-logout')?.addEventListener('click', async () => {
           const supa = this._getSupa && this._getSupa();
           if (supa) try { await supa.auth.signOut(); } catch {}
@@ -128,6 +145,8 @@ async init() {
         } catch (e) { /* offline/timeout, mantém Store.user local */ }
       }
       this.renderAuthOrApp();
+      // check de atualização na abertura do app (indicador no popover do perfil)
+      Updater.check({ silent: true });
       // atualiza o rótulo de "última sincronização" a cada 15s
       setInterval(() => this.updateSyncLabel(), 15000);
     },
@@ -271,19 +290,19 @@ showModal(title, bodyHtml, onOk) {
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
         .then((reg) => {
           try { reg.update(); } catch {}
+          // SW waiting pronto (check na abertura achou novidade e o fetch network-first
+          // já baixou) → o chip já sinaliza; instalação acontece no clique em Atualizar app.
+          // Fallback: se o browser baixou ANTES do check (aba aberta há dias), o toast
+          // clássico com botão Recarregar continua existindo.
           reg.addEventListener('updatefound', () => {
             const nw = reg.installing;
             if (!nw) return;
             nw.addEventListener('statechange', () => {
               if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                // busca changelog curto para mostrar no toast
-                fetch('CHANGELOG.md').then(r => r.text()).then(t => {
-                  const m = t.match(/## \[.*?\][^\n]*\n([\s\S]*?)(?=\n## |\n$)/);
-                  const whats = m ? m[1].split('\n').filter(l=>l.trim().startsWith('-')).slice(0,2).map(l=>l.replace(/^-\s*/,'')).join(' · ') : 'Melhorias de performance e correções';
-                  UI.toast(`Nova versão — ${whats}`, { kind: 'info', duration: 9000, action: { label: 'Recarregar', fn: () => location.reload() } });
-                }).catch(() => {
-                  UI.toast('Nova versão disponível', { kind: 'info', duration: 8000, action: { label: 'Recarregar', fn: () => location.reload() } });
-                });
+                // só avisa via toast se o check do CHANGELOG ainda não sinalizou
+                const lc = Updater.lastCheck;
+                if (lc && lc.state === 'update') return;
+                UI.toast('Nova versão disponível', { kind: 'info', duration: 8000, action: { label: 'Recarregar', fn: () => location.reload() } });
               }
             });
           });

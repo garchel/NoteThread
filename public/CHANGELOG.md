@@ -2,6 +2,16 @@
 
 Todas as mudanças notáveis serão documentadas aqui (semver).
 
+## [1.4.1] — 2026-09-02
+### Adicionado
+- Botão "Atualizar app" no menu do perfil: verificação automática na abertura (compara com o CHANGELOG servido), indicador de status (atualizado ✓ / nova versão disponível / offline) e instalação da nova versão no clique
+- Ponto âmbar no avatar quando há versão nova disponível
+- Atualização controlada: o Service Worker agora espera o clique (SKIP_WAITING) em vez de assumir a nova versão sozinho
+- Versão única centralizada em `window.APP_VERSION` (Sobre, Sentry e verificação usam a mesma fonte)
+
+### Melhorado
+- Navegação e CHANGELOG agora são network-first no Service Worker — a versão nova chega sem duplo reload
+
 ## [1.4.0] — 2026-09-01
 ### Adicionado
 - Rebrand final para SaveChat: logo própria em toda a UI, favicon com badge de lembretes, ícones PWA dedicados (any + maskable)
